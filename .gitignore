@@ -1,0 +1,23 @@
+﻿# 编译产物
+*.exe
+*.exe~
+account
+ai
+data
+gateway
+link
+shop
+streamer
+bin/
+
+# IDE
+.idea/
+*.iml
+
+# 环境
+.env
+.env.local
+
+# 测试缓存
+*.test
+*.out
