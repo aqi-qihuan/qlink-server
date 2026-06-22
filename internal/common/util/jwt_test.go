@@ -25,12 +25,13 @@ func TestGenerateToken_Success(t *testing.T) {
 	token, err := GenerateToken(user)
 	require.NoError(t, err)
 	assert.NotEmpty(t, token)
-	assert.True(t, strings.HasPrefix(token, tokenPrefix), "token 应以 %s 开??, tokenPrefix)
+	assert.True(t, strings.HasPrefix(token, tokenPrefix), "token 应以 %s 开头", tokenPrefix)
 }
 
 func TestGenerateToken_ParseRoundtrip(t *testing.T) {
 	user := &model.LoginUser{
-		AccountNo: 658180183031197696, // 大整??		Username:  "admin",
+		AccountNo: 658180183031197696, // 大整数
+		Username:  "admin",
 		Mail:      "admin@example.com",
 		Phone:     "13900139000",
 		HeadImg:   "https://example.com/img.png",
@@ -52,12 +53,12 @@ func TestGenerateToken_ParseRoundtrip(t *testing.T) {
 
 func TestParseToken_InvalidToken(t *testing.T) {
 	_, err := ParseToken("invalid.token.here")
-	assert.Error(t, err, "无效 token 应返回错??)
+	assert.Error(t, err, "无效 token 应返回错误")
 }
 
 func TestParseToken_EmptyToken(t *testing.T) {
 	_, err := ParseToken("")
-	assert.Error(t, err, "??token 应返回错??)
+	assert.Error(t, err, "空 token 应返回错误")
 }
 
 func TestParseToken_WithPrefix(t *testing.T) {
@@ -71,7 +72,7 @@ func TestParseToken_WithPrefix(t *testing.T) {
 }
 
 func TestParseToken_WithoutPrefix(t *testing.T) {
-	// 手动构造一个没有前缀??JWT
+	// 手动构造一个没有前缀的 JWT
 	claims := jwt.MapClaims{
 		"sub":        "xdclass",
 		"account_no": float64(123),
@@ -81,7 +82,7 @@ func TestParseToken_WithoutPrefix(t *testing.T) {
 	signed, err := jwtToken.SignedString([]byte(getJWTSecret()))
 	require.NoError(t, err)
 
-	// ParseToken ??TrimPrefix，但如果没有前缀也能正常解析
+	// ParseToken 会 TrimPrefix，但如果没有前缀也能正常解析
 	parsed, err := ParseToken(signed)
 	require.NoError(t, err)
 	assert.Equal(t, int64(123), parsed.AccountNo)
@@ -89,7 +90,8 @@ func TestParseToken_WithoutPrefix(t *testing.T) {
 }
 
 func TestParseToken_WrongSecret(t *testing.T) {
-	// 用错误密钥签??	claims := jwt.MapClaims{
+	// 用错误密钥签名
+	claims := jwt.MapClaims{
 		"sub":        "xdclass",
 		"account_no": float64(123),
 	}
@@ -98,7 +100,7 @@ func TestParseToken_WrongSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = ParseToken(signed)
-	assert.Error(t, err, "错误密钥签名??token 应解析失??)
+	assert.Error(t, err, "错误密钥签名的 token 应解析失败")
 }
 
 func TestParseToken_ExpiredToken(t *testing.T) {
@@ -107,19 +109,20 @@ func TestParseToken_ExpiredToken(t *testing.T) {
 	claims := jwt.MapClaims{
 		"sub":        "xdclass",
 		"iat":        now.Add(-48 * time.Hour).Unix(),
-		"exp":        now.Add(-24 * time.Hour).Unix(), // 已过??		"account_no": float64(999),
+		"exp":        now.Add(-24 * time.Hour).Unix(), // 已过期
+		"account_no": float64(999),
 	}
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := jwtToken.SignedString([]byte(getJWTSecret()))
 	require.NoError(t, err)
 
 	_, err = ParseToken(tokenPrefix + signed)
-	assert.Error(t, err, "过期 token 应解析失??)
-	assert.Contains(t, err.Error(), "expired", "错误应包??expired 信息")
+	assert.Error(t, err, "过期 token 应解析失败")
+	assert.Contains(t, err.Error(), "expired", "错误应包含 expired 信息")
 }
 
 func TestParseToken_AccountNoPrecision(t *testing.T) {
-	// 大整??account_no (int64 最大值附?? 不应丢失精度
+	// 大整数 account_no (int64 最大值附近) 不应丢失精度
 	user := &model.LoginUser{
 		AccountNo: 9007199254740993, // 超出 float64 精度范围
 		Username:  "precision_test",
@@ -131,11 +134,11 @@ func TestParseToken_AccountNoPrecision(t *testing.T) {
 	parsed, err := ParseToken(token)
 	require.NoError(t, err)
 	assert.Equal(t, int64(9007199254740993), parsed.AccountNo,
-		"大整??account_no 不应丢失精度")
+		"大整数 account_no 不应丢失精度")
 }
 
 func TestGenerateToken_EmptyUser(t *testing.T) {
-	// 空用户也能生??token（字段为空）
+	// 空用户也能生成 token（字段为空）
 	user := &model.LoginUser{}
 	token, err := GenerateToken(user)
 	require.NoError(t, err)
@@ -167,8 +170,9 @@ func TestGenerateToken_EnvSecret(t *testing.T) {
 func TestGetStringClaim(t *testing.T) {
 	claims := jwt.MapClaims{
 		"key1": "value1",
-		"key2": 123, // 非字符串
-		"key3": nil, // nil ??	}
+		"key2": 123,  // 非字符串
+		"key3": nil,  // nil 值
+	}
 
 	assert.Equal(t, "value1", getStringClaim(claims, "key1"))
 	assert.Equal(t, "", getStringClaim(claims, "key2"), "非字符串应返回空")
