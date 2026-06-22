@@ -139,7 +139,7 @@ func (ctrl *ShortLinkController) Add(c *gin.Context) {
 	content, _ := json.Marshal(map[string]interface{}{
 		"groupId":      req.GroupID,
 		"title":        req.Title,
-		"originalUrl":  prefixedUrl,
+		"originalUrl":  req.OriginalUrl,
 		"domain":       req.DomainType,
 		"code":         code,
 		"sign":         sign,

@@ -12,7 +12,7 @@ USE `aqicloud_link_0`;
 -- ----------------------------
 DROP TABLE IF EXISTS `domain`;
 CREATE TABLE `domain` (
-  `id` bigint UNSIGNED NOT NULL,
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
   `account_no` bigint DEFAULT NULL COMMENT '用户自己绑定的域名',
   `domain_type` varchar(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '域名类型：CUSTOM/OFFICIAL',
   `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
