@@ -19,6 +19,11 @@ const (
 	// Format: sl:redirect:{code}
 	// Fields: url, del, state
 	SHORT_LINK_CACHE_KEY = "sl:redirect:%s"
+
+	// OAUTH_STATE_KEY is the Redis key for OAuth CSRF state token.
+	// Format: oauth:state:{stateToken}
+	// Value: redirectTo URL, TTL: 10 minutes
+	OAUTH_STATE_KEY = "oauth:state:%s"
 )
 
 // FormatCheckCodeKey formats the verification code Redis key.
@@ -39,4 +44,9 @@ func FormatDayTotalTrafficKey(accountNo int64) string {
 // FormatShortLinkCacheKey formats the short link cache Redis key.
 func FormatShortLinkCacheKey(code string) string {
 	return fmt.Sprintf(SHORT_LINK_CACHE_KEY, code)
+}
+
+// FormatOAuthStateKey formats the OAuth CSRF state Redis key.
+func FormatOAuthStateKey(state string) string {
+	return fmt.Sprintf(OAUTH_STATE_KEY, state)
 }

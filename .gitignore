@@ -1,13 +1,14 @@
-﻿# 编译产物
+﻿# 编译产物（锚定到仓库根目录，避免误忽略同名源码目录）
 *.exe
 *.exe~
-account
-ai
-data
-gateway
-link
-shop
-streamer
+/account
+/ai
+/data
+/gateway
+/link
+/shop
+/streamer
+/initschema
 bin/
 
 # IDE
@@ -21,3 +22,6 @@ bin/
 # 测试缓存
 *.test
 *.out
+
+# 日志
+logs/
