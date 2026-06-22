@@ -1,6 +1,8 @@
 -- AB Test tables for qlink-server
 -- These are stored in ds0 (aqicloud_link_0), non-sharded
 
+USE `aqicloud_link_0`;
+
 CREATE TABLE IF NOT EXISTS `ab_test` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '实验ID',
     `account_no` BIGINT NOT NULL COMMENT '用户账号',
