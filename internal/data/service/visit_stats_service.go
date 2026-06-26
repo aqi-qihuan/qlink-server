@@ -70,7 +70,7 @@ func (s *VisitStatsService) RegionDay(accountNo int64, code, startTime, endTime 
 	rows, err := s.conn.Query(ctx,
 		`SELECT province, city, sum(pv) AS pv_count, sum(uv) AS uv_count, count(DISTINCT ip) AS ip_count
 		 FROM visit_stats WHERE account_no = $1 AND code = $2
-		 AND toYYYYMMDD(start_time) BETWEEN $3 AND $4
+		 AND toYYYYMMDD(start_time) BETWEEN toYYYYMMDD(parseDateTimeBestEffort($3)) AND toYYYYMMDD(parseDateTimeBestEffort($4))
 		 GROUP BY province, city ORDER BY pv_count DESC`,
 		accountNo, code, startTime, endTime)
 	if err != nil {
@@ -102,7 +102,7 @@ func (s *VisitStatsService) Trend(accountNo int64, code, trendType, startTime, e
 				 sum(if(is_new = 1, uv, 0)) AS new_uv, sum(uv) AS uv_count,
 				 sum(pv) AS pv_count, count(DISTINCT ip) AS ip_count
 				 FROM visit_stats WHERE account_no = $1 AND code = $2
-				 AND toYYYYMMDD(start_time) BETWEEN $3 AND $4
+				 AND toYYYYMMDD(start_time) BETWEEN toYYYYMMDD(parseDateTimeBestEffort($3)) AND toYYYYMMDD(parseDateTimeBestEffort($4))
 				 GROUP BY dt ORDER BY dt ASC`
 		args = []interface{}{accountNo, code, startTime, endTime}
 	case "HOUR":
@@ -110,7 +110,7 @@ func (s *VisitStatsService) Trend(accountNo int64, code, trendType, startTime, e
 				 sum(if(is_new = 1, uv, 0)) AS new_uv, sum(uv) AS uv_count,
 				 sum(pv) AS pv_count, count(DISTINCT ip) AS ip_count
 				 FROM visit_stats WHERE account_no = $1 AND code = $2
-				 AND toYYYYMMDD(start_time) = $3
+				 AND toYYYYMMDD(start_time) = toYYYYMMDD(parseDateTimeBestEffort($3))
 				 GROUP BY dt ORDER BY dt ASC`
 		args = []interface{}{accountNo, code, startTime}
 	case "MINUTE":
@@ -126,7 +126,7 @@ func (s *VisitStatsService) Trend(accountNo int64, code, trendType, startTime, e
 				 sum(if(is_new = 1, uv, 0)) AS new_uv, sum(uv) AS uv_count,
 				 sum(pv) AS pv_count, count(DISTINCT ip) AS ip_count
 				 FROM visit_stats WHERE account_no = $1 AND code = $2
-				 AND toYYYYMMDD(start_time) BETWEEN $3 AND $4
+				 AND toYYYYMMDD(start_time) BETWEEN toYYYYMMDD(parseDateTimeBestEffort($3)) AND toYYYYMMDD(parseDateTimeBestEffort($4))
 				 GROUP BY dt ORDER BY dt ASC`
 		args = []interface{}{accountNo, code, startTime, endTime}
 	default:

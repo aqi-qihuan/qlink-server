@@ -353,14 +353,19 @@ func (ctrl *ShortLinkController) Status(c *gin.Context) {
 	dbIdx := sharding.GetDBIndexByPrefix(dbPrefix)
 	tableName := sharding.GetTableName("short_link", tableSuffix)
 
-	result := ctrl.dbs[dbIdx].Table(tableName).
-		Where("code = ? AND account_no = ? AND del = 0", req.Code, loginUser.AccountNo).
-		Update("state", req.State)
+	// Use raw SQL to avoid GORM quirks with sharded tables
+	result := ctrl.dbs[dbIdx].Exec(
+		"UPDATE "+tableName+" SET state = ? WHERE code = ? AND account_no = ? AND del = 0",
+		req.State, req.Code, loginUser.AccountNo,
+	)
 	if result.Error != nil {
 		response.JSON(c, response.BuildError("update failed: "+result.Error.Error()))
 		return
 	}
-	if result.RowsAffected == 0 {
+	// Check if the row actually exists
+	var exists int
+	ctrl.dbs[dbIdx].Raw("SELECT 1 FROM "+tableName+" WHERE code = ? AND account_no = ? AND del = 0 LIMIT 1", req.Code, loginUser.AccountNo).Scan(&exists)
+	if exists == 0 {
 		response.JSON(c, response.BuildError("short link not found"))
 		return
 	}
@@ -394,16 +399,18 @@ func (ctrl *ShortLinkController) Summary(c *gin.Context) {
 
 	for _, prefix := range prefixes {
 		dbIdx := sharding.GetDBIndexByPrefix(prefix)
-		tableName := sharding.GetTableName("short_link", prefix)
+		for _, suffix := range sharding.TableSuffixList {
+			tableName := sharding.GetTableName("short_link", suffix)
 
-		var total, active, todayCreated int64
-		ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND del = 0", loginUser.AccountNo).Count(&total)
-		ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND state = 'ACTIVE' AND del = 0", loginUser.AccountNo).Count(&active)
-		ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND gmt_create >= ? AND del = 0", loginUser.AccountNo, today).Count(&todayCreated)
+			var total, active, todayCreated int64
+			ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND del = 0", loginUser.AccountNo).Count(&total)
+			ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND state = 'ACTIVE' AND del = 0", loginUser.AccountNo).Count(&active)
+			ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND gmt_create >= ? AND del = 0", loginUser.AccountNo, today).Count(&todayCreated)
 
-		result.TotalLinks += total
-		result.ActiveLinks += active
-		result.TodayCreated += todayCreated
+			result.TotalLinks += total
+			result.ActiveLinks += active
+			result.TodayCreated += todayCreated
+		}
 	}
 
 	response.JSON(c, response.BuildSuccessData(result))
