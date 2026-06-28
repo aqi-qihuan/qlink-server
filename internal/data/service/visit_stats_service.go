@@ -9,14 +9,16 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/aqi/qlink-server/internal/data/vo"
+	"github.com/redis/go-redis/v9"
 )
 
 type VisitStatsService struct {
 	conn driver.Conn
+	rdb  *redis.Client
 }
 
-func NewVisitStatsService(conn driver.Conn) *VisitStatsService {
-	return &VisitStatsService{conn: conn}
+func NewVisitStatsService(conn driver.Conn, rdb *redis.Client) *VisitStatsService {
+	return &VisitStatsService{conn: conn, rdb: rdb}
 }
 
 // PageRecord returns paginated visit records.

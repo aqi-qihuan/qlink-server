@@ -74,7 +74,7 @@ services:
     image: minio/minio:latest
     container_name: qlink-minio
     ports:
-      - "9000:9000"
+      - "9010:9000"
       - "9001:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -129,7 +129,7 @@ services:
       MINIO_BUCKET: "aqicloud"
       MINIO_ACCESS_KEY: "minioadmin"
       MINIO_SECRET_KEY: "minioadmin"
-      MINIO_PUBLIC_URL: "http://192.168.100.21:9000/aqicloud"
+      MINIO_PUBLIC_URL: "http://192.168.192.21:9010/aqicloud"
       SMS_PROVIDER: "log"
       SHOP_SERVICE: "http://shop:8005"
     depends_on:
@@ -215,6 +215,7 @@ services:
       WECHAT_MCH_ID: "${WECHAT_MCH_ID:-}"
       WECHAT_API_KEY: "${WECHAT_API_KEY:-}"
       WECHAT_NOTIFY_URL: "${WECHAT_NOTIFY_URL:-}"
+      WECHAT_PAY_ENV: "${WECHAT_PAY_ENV:-sandbox}"
     depends_on:
       mysql:
         condition: service_healthy

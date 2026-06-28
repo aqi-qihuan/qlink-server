@@ -357,7 +357,7 @@ func (s *WechatPayStrategy) QueryPayStatus(payInfo *PayInfoVO) (string, error) {
 	}
 	params2["sign"] = signWechatV2(params2, s.cfg.WechatAPIKey)
 	xmlBody := buildXMLRequest(params2)
-	httpResp, err := s.client.Post(sandboxURL("/pay/orderquery"), "application/xml", strings.NewReader(xmlBody))
+	httpResp, err := s.client.Post(s.sandboxURL("/pay/orderquery"), "application/xml", strings.NewReader(xmlBody))
 	if err != nil {
 		return "", err
 	}
@@ -426,7 +426,7 @@ func (s *WechatPayStrategy) Refund(payInfo *PayInfoVO) (string, error) {
 }
 
 func (s *WechatPayStrategy) callV2API(path string, params map[string]string) (*wechatV2Response, error) {
-	apiURL := sandboxURL(path)
+	apiURL := s.sandboxURL(path)
 	xmlBody := buildXMLRequest(params)
 
 	httpResp, err := s.client.Post(apiURL, "application/xml", strings.NewReader(xmlBody))
@@ -448,9 +448,12 @@ func (s *WechatPayStrategy) callV2API(path string, params map[string]string) (*w
 }
 
 // sandboxURL returns the WeChat Pay sandbox URL if sandbox mode, otherwise the production URL.
-func sandboxURL(path string) string {
-	// WeChat sandbox uses /sandboxnew/ prefix
-	return "https://api.mch.weixin.qq.com/sandboxnew" + path
+// Controlled by WECHAT_PAY_ENV environment variable: "production" for live, anything else for sandbox.
+func (s *WechatPayStrategy) sandboxURL(path string) string {
+	if s.cfg.WechatSandbox {
+		return "https://api.mch.weixin.qq.com/sandboxnew" + path
+	}
+	return "https://api.mch.weixin.qq.com" + path
 }
 
 // buildXMLRequest builds an XML request body from params.

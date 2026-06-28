@@ -18,11 +18,11 @@ import (
 func main() {
 	godotenv.Load()
 
-	kafkaBrokers := getEnv("KAFKA_BROKERS", "192.168.100.21:9092")
-	redisAddr := getEnv("REDIS_ADDR", "192.168.100.21:6379")
+	kafkaBrokers := getEnv("KAFKA_BROKERS", "192.168.192.21:9092")
+	redisAddr := getEnv("REDIS_ADDR", "192.168.192.21:6379")
 	redisPwd := getEnv("REDIS_PWD", "aqi1015")
 	redisDB := 0
-	clickhouseAddr := getEnv("CLICKHOUSE_ADDR", "192.168.100.21:8123")
+	clickhouseAddr := getEnv("CLICKHOUSE_ADDR", "192.168.192.21:8123")
 	clickhouseUser := getEnv("CLICKHOUSE_USER", "default")
 	clickhousePwd := getEnv("CLICKHOUSE_PWD", "aqi1015!")
 	clickhouseDB := getEnv("CLICKHOUSE_DB", "default")

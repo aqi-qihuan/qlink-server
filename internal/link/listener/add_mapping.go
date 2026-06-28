@@ -2,6 +2,7 @@ package listener
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/aqi/qlink-server/internal/common/enums"
@@ -21,7 +22,9 @@ func StartAddMappingListener(rmq *mq.RabbitMQ, svc *service.ShortLinkService) {
 		}
 		eventMsg.EventMessageType = string(enums.SHORT_LINK_ADD_MAPPING)
 		log.Printf("[MQ] consuming add_mapping, messageId=%s", eventMsg.MessageId)
-		svc.HandleAddShortLink(&eventMsg)
+		if ok := svc.HandleAddShortLink(&eventMsg); !ok {
+			return fmt.Errorf("add_mapping handler failed for messageId=%s", eventMsg.MessageId)
+		}
 		return nil
 	}
 	if err := rmq.Consume(config.QueueAddMapping, "add_mapping_consumer", handler); err != nil {

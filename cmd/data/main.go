@@ -2,16 +2,19 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/aqi/qlink-server/internal/common/interceptor"
 	"github.com/aqi/qlink-server/internal/common/middleware"
 	"github.com/aqi/qlink-server/internal/common/registry"
+	"github.com/aqi/qlink-server/internal/common/util"
 	"github.com/aqi/qlink-server/internal/data/controller"
 	"github.com/aqi/qlink-server/internal/data/service"
 	"github.com/gin-gonic/gin"
@@ -20,8 +23,13 @@ import (
 func main() {
 	godotenv.Load()
 
+	// Startup security checks
+	if err := util.ValidateJWTSecret(); err != nil {
+		log.Fatalf("[FATAL] %v", err)
+	}
+
 	port := getEnv("PORT", "8002")
-	chAddr := getEnv("CLICKHOUSE_ADDR", "192.168.100.21:8123")
+	chAddr := getEnv("CLICKHOUSE_ADDR", "192.168.192.21:8123")
 	chUser := getEnv("CLICKHOUSE_USER", "default")
 	chPwd := getEnv("CLICKHOUSE_PWD", "aqi1015!")
 	chDB := getEnv("CLICKHOUSE_DB", "default")
@@ -51,8 +59,20 @@ func main() {
 	}
 	log.Println("ClickHouse connected")
 
+	// Redis
+	redisHost := getEnv("REDIS_HOST", "192.168.192.21")
+	redisPort := getEnv("REDIS_PORT", "6379")
+	redisPwd := getEnv("REDIS_PWD", "aqi1015")
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
+		Password: redisPwd,
+	})
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		log.Printf("[WARN] Redis connection failed: %v (caching disabled)", err)
+	}
+
 	// Service + Controller
-	statsSvc := service.NewVisitStatsService(chConn)
+	statsSvc := service.NewVisitStatsService(chConn, rdb)
 	statsCtrl := controller.NewVisitStatsController(statsSvc)
 
 	// Gin router

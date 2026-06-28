@@ -15,6 +15,7 @@ import (
 	"github.com/aqi/qlink-server/internal/common/middleware"
 	"github.com/aqi/qlink-server/internal/common/mq"
 	"github.com/aqi/qlink-server/internal/common/registry"
+	"github.com/aqi/qlink-server/internal/common/util"
 	"github.com/aqi/qlink-server/internal/link/config"
 	"github.com/aqi/qlink-server/internal/link/controller"
 	"github.com/aqi/qlink-server/internal/link/listener"
@@ -28,16 +29,24 @@ import (
 func main() {
 	godotenv.Load()
 
+	// Startup security checks
+	if err := util.ValidateJWTSecret(); err != nil {
+		log.Fatalf("[FATAL] %v", err)
+	}
+	if err := middleware.ValidateRPCToken(); err != nil {
+		log.Printf("[WARN] %v", err)
+	}
+
 	port := getEnv("PORT", "8003")
-	mysqlHost := getEnv("MYSQL_HOST", "192.168.100.21")
+	mysqlHost := getEnv("MYSQL_HOST", "192.168.192.21")
 	mysqlPort := getEnv("MYSQL_PORT", "3307")
 	mysqlUser := getEnv("MYSQL_USER", "root")
 	mysqlPwd := getEnv("MYSQL_PWD", "aqi1015!")
-	redisHost := getEnv("REDIS_HOST", "192.168.100.21")
+	redisHost := getEnv("REDIS_HOST", "192.168.192.21")
 	redisPort := getEnv("REDIS_PORT", "6379")
 	redisPwd := getEnv("REDIS_PWD", "aqi1015")
-	rabbitURL := getEnv("RABBITMQ_URL", "amqp://admin:password@192.168.100.21:5672/")
-	kafkaBrokers := getEnv("KAFKA_BROKERS", "192.168.100.21:9092")
+	rabbitURL := getEnv("RABBITMQ_URL", "amqp://admin:password@192.168.192.21:5672/")
+	kafkaBrokers := getEnv("KAFKA_BROKERS", "192.168.192.21:9092")
 	accountAddr := getEnv("ACCOUNT_SERVICE", "http://localhost:8001")
 	rpcToken := getEnv("RPC_TOKEN", "rpc-token-default")
 

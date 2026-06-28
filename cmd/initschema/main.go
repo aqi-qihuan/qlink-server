@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	dsn := "root:aqi1015!@tcp(192.168.100.21:3307)/?charset=utf8mb4&parseTime=true&multiStatements=true"
+	dsn := "root:aqi1015!@tcp(192.168.192.21:3307)/?charset=utf8mb4&parseTime=true&multiStatements=true"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("connect failed: %v", err)
@@ -26,11 +26,16 @@ func main() {
 
 	sqlDir := filepath.Join(".", "sql")
 	files := []string{
-		"aqicloud_account.sql",
-		"aqicloud_link_0.sql",
-		"aqicloud_link_1.sql",
-		"aqicloud_link_a.sql",
-		"aqicloud_shop.sql",
+		"01_aqicloud_account.sql",
+		"02_aqicloud_link_0.sql",
+		"03_aqicloud_link_1.sql",
+		"04_aqicloud_link_a.sql",
+		"05_aqicloud_shop.sql",
+		"30_ab_test.sql",
+		"31_oidc_migration.sql",
+		"32_p0_password.sql",
+		"33_p2_migration.sql",
+		"34_p3_migration.sql",
 	}
 
 	for _, f := range files {

@@ -2,6 +2,7 @@ package listener
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/aqi/qlink-server/internal/account/config"
@@ -33,7 +34,9 @@ func startListener(rmq *mq.RabbitMQ, queue, consumer string, svc *service.Traffi
 			return err
 		}
 		log.Printf("[MQ] consuming %s, messageId=%s, type=%s", queue, eventMsg.MessageId, eventMsg.EventMessageType)
-		svc.HandleTrafficMessage(&eventMsg)
+		if err := svc.HandleTrafficMessage(&eventMsg); err != nil {
+			return fmt.Errorf("traffic handler failed on %s for messageId=%s: %w", queue, eventMsg.MessageId, err)
+		}
 		return nil
 	}
 	if err := rmq.Consume(queue, consumer, handler); err != nil {

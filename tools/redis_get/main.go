@@ -10,7 +10,7 @@ import (
 
 func main() {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "192.168.100.21:6379",
+		Addr:     "192.168.192.21:6379",
 		Password: "aqi1015",
 	})
 	ctx := context.Background()

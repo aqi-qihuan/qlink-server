@@ -2,6 +2,7 @@ package listener
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/aqi/qlink-server/internal/common/enums"
@@ -21,7 +22,9 @@ func StartDelLinkListener(rmq *mq.RabbitMQ, svc *service.ShortLinkService) {
 		}
 		eventMsg.EventMessageType = string(enums.SHORT_LINK_DEL_LINK)
 		log.Printf("[MQ] consuming del_link, messageId=%s", eventMsg.MessageId)
-		svc.HandleDelShortLink(&eventMsg)
+		if ok := svc.HandleDelShortLink(&eventMsg); !ok {
+			return fmt.Errorf("del_link handler failed for messageId=%s", eventMsg.MessageId)
+		}
 		return nil
 	}
 	if err := rmq.Consume(config.QueueDelLink, "del_link_consumer", handler); err != nil {

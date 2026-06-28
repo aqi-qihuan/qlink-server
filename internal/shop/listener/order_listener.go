@@ -2,6 +2,7 @@ package listener
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/aqi/qlink-server/internal/common/model"
@@ -30,7 +31,9 @@ func startListener(rmq *mq.RabbitMQ, queue, consumer string, svc *service.OrderS
 			return err
 		}
 		log.Printf("[MQ] consuming %s, messageId=%s, type=%s", queue, eventMsg.MessageId, eventMsg.EventMessageType)
-		svc.HandleProductOrderMessage(&eventMsg)
+		if err := svc.HandleProductOrderMessage(&eventMsg); err != nil {
+			return fmt.Errorf("order handler failed on %s for messageId=%s: %w", queue, eventMsg.MessageId, err)
+		}
 		return nil
 	}
 	if err := rmq.Consume(queue, consumer, handler); err != nil {

@@ -156,10 +156,12 @@ func (j *DWDJob) checkNewVisitor(ctx context.Context, udid string, obj map[strin
 	currentDate := FormatDate(int64(ts))
 	redisKey := "streamer:visitor:" + udid
 
+	visitorTTL := 30 * 24 * time.Hour // 30 days TTL to prevent Redis unbounded growth
+
 	stored, err := j.rdb.Get(ctx, redisKey).Result()
 	if err == redis.Nil {
 		// First time visitor
-		j.rdb.Set(ctx, redisKey, currentDate, 0) // no expiry, matches Java (no TTL)
+		j.rdb.Set(ctx, redisKey, currentDate, visitorTTL)
 		return 1
 	}
 	if err != nil {
@@ -171,7 +173,7 @@ func (j *DWDJob) checkNewVisitor(ctx context.Context, udid string, obj map[strin
 		return 0 // returning visitor
 	}
 
-	// Different day ??new visitor, update state
-	j.rdb.Set(ctx, redisKey, currentDate, 0)
+	// Different day => new visitor, update state
+	j.rdb.Set(ctx, redisKey, currentDate, visitorTTL)
 	return 1
 }

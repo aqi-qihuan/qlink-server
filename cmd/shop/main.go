@@ -12,6 +12,7 @@ import (
 	"github.com/aqi/qlink-server/internal/common/middleware"
 	"github.com/aqi/qlink-server/internal/common/mq"
 	"github.com/aqi/qlink-server/internal/common/registry"
+	"github.com/aqi/qlink-server/internal/common/util"
 	"github.com/aqi/qlink-server/internal/shop/component"
 	"github.com/aqi/qlink-server/internal/shop/config"
 	"github.com/aqi/qlink-server/internal/shop/controller"
@@ -26,15 +27,20 @@ import (
 func main() {
 	godotenv.Load()
 
+	// Startup security checks
+	if err := util.ValidateJWTSecret(); err != nil {
+		log.Fatalf("[FATAL] %v", err)
+	}
+
 	port := getEnv("PORT", "8005")
-	mysqlHost := getEnv("MYSQL_HOST", "192.168.100.21")
+	mysqlHost := getEnv("MYSQL_HOST", "192.168.192.21")
 	mysqlPort := getEnv("MYSQL_PORT", "3307")
 	mysqlUser := getEnv("MYSQL_USER", "root")
 	mysqlPwd := getEnv("MYSQL_PWD", "aqi1015!")
-	redisHost := getEnv("REDIS_HOST", "192.168.100.21")
+	redisHost := getEnv("REDIS_HOST", "192.168.192.21")
 	redisPort := getEnv("REDIS_PORT", "6379")
 	redisPwd := getEnv("REDIS_PWD", "aqi1015")
-	rabbitURL := getEnv("RABBITMQ_URL", "amqp://admin:password@192.168.100.21:5672/")
+	rabbitURL := getEnv("RABBITMQ_URL", "amqp://admin:password@192.168.192.21:5672/")
 
 	// Shop DB
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/aqicloud_shop?charset=utf8mb4&parseTime=True&loc=Local",

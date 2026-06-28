@@ -1,8 +1,11 @@
 package service
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/GehirnInc/crypt"
 	_ "github.com/GehirnInc/crypt/md5_crypt"
@@ -12,17 +15,21 @@ import (
 	"github.com/aqi/qlink-server/internal/common/model"
 	"github.com/aqi/qlink-server/internal/common/mq"
 	"github.com/aqi/qlink-server/internal/common/util"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
+const accountCacheTTL = 30 * time.Second
+
 type AccountService struct {
 	db    *gorm.DB
+	rdb   *redis.Client
 	rmq   *mq.RabbitMQ
 	notif *NotifyService
 }
 
-func NewAccountService(db *gorm.DB, rmq *mq.RabbitMQ, notif *NotifyService) *AccountService {
-	return &AccountService{db: db, rmq: rmq, notif: notif}
+func NewAccountService(db *gorm.DB, rdb *redis.Client, rmq *mq.RabbitMQ, notif *NotifyService) *AccountService {
+	return &AccountService{db: db, rdb: rdb, rmq: rmq, notif: notif}
 }
 
 // Register creates a new account and sends free traffic init event.
@@ -106,12 +113,35 @@ func (s *AccountService) Login(req *request.AccountLoginRequest) (string, error)
 	return token, nil
 }
 
-// Detail returns account info by account number.
+// Detail returns account info by account number. Uses Redis cache (30s TTL).
 func (s *AccountService) Detail(accountNo int64) (*accountmodel.AccountDO, error) {
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("account:detail:%d", accountNo)
+
+	// Try cache first
+	if s.rdb != nil {
+		cached, err := s.rdb.Get(ctx, cacheKey).Result()
+		if err == nil && cached != "" {
+			var account accountmodel.AccountDO
+			if json.Unmarshal([]byte(cached), &account) == nil {
+				return &account, nil
+			}
+		}
+	}
+
+	// Query DB
 	var account accountmodel.AccountDO
 	if err := s.db.Where("account_no = ?", accountNo).First(&account).Error; err != nil {
 		return nil, fmt.Errorf("account not found")
 	}
+
+	// Cache result
+	if s.rdb != nil {
+		if data, err := json.Marshal(account); err == nil {
+			s.rdb.Set(ctx, cacheKey, string(data), accountCacheTTL)
+		}
+	}
+
 	return &account, nil
 }
 

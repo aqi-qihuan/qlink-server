@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	dsn := "root:aqi1015!@tcp(192.168.100.21:3307)/aqicloud_account?charset=utf8mb4&parseTime=True"
+	dsn := "root:aqi1015!@tcp(192.168.192.21:3307)/aqicloud_account?charset=utf8mb4&parseTime=True"
 	if len(os.Args) > 1 {
 		dsn = os.Args[1]
 	}

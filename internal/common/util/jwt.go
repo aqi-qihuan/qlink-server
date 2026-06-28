@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -17,11 +18,23 @@ const (
 	subject      = "xdclass"
 )
 
+const defaultJWTSecret = "change-me-in-production"
+
 func getJWTSecret() string {
 	if s := os.Getenv("JWT_SECRET"); s != "" {
 		return s
 	}
-	return "change-me-in-production"
+	return defaultJWTSecret
+}
+
+// ValidateJWTSecret checks if JWT_SECRET is set to a secure value.
+// Returns an error if it is empty or still set to the default value.
+func ValidateJWTSecret() error {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" || secret == defaultJWTSecret {
+		return fmt.Errorf("JWT_SECRET is not configured or still using default value 'change-me-in-production'. Set a secure JWT_SECRET environment variable before starting the service")
+	}
+	return nil
 }
 
 // GenerateToken creates a JWT token compatible with the Java version.

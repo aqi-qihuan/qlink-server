@@ -42,7 +42,7 @@ OAUTH_GITHUB_CLIENT_SECRET=xxx
 ### 3. 数据库迁移
 
 ```bash
-mysql -h192.168.100.21 -P3307 -uroot -p aqicloud_account < sql/oidc_migration.sql
+mysql -h192.168.192.21 -P3307 -uroot -p aqicloud_account < sql/oidc_migration.sql
 ```
 
 ### 4. API 接口

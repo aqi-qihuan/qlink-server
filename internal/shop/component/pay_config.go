@@ -17,9 +17,12 @@ type PayConfig struct {
 	WechatMchID     string
 	WechatAPIKey    string // V2 API key for MD5 signing
 	WechatNotifyURL string
+	WechatSandbox   bool   // true = sandbox URL, false = production URL
 }
 
 func PayConfigFromEnv() PayConfig {
+	// WECHAT_PAY_ENV: "sandbox" (default) or "production"
+	wechatEnv := getEnv("WECHAT_PAY_ENV", "sandbox")
 	return PayConfig{
 		AliAppID:        getEnv("ALI_APP_ID", ""),
 		AliPrivateKey:   getEnv("ALI_PRIVATE_KEY", ""),
@@ -30,6 +33,7 @@ func PayConfigFromEnv() PayConfig {
 		WechatMchID:     getEnv("WECHAT_MCH_ID", ""),
 		WechatAPIKey:    getEnv("WECHAT_API_KEY", ""),
 		WechatNotifyURL: getEnv("WECHAT_NOTIFY_URL", ""),
+		WechatSandbox:   wechatEnv != "production",
 	}
 }
 

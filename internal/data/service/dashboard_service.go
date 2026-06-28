@@ -2,15 +2,31 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/aqi/qlink-server/internal/data/vo"
 )
 
+const dashboardCacheTTL = 60 * time.Second
+
 // GetDashboard returns aggregated dashboard stats for a user account.
+// Results are cached in Redis for 60 seconds to reduce ClickHouse load.
 func (s *VisitStatsService) GetDashboard(accountNo int64, startTime, endTime string) (*vo.DashboardVO, error) {
 	ctx := context.Background()
+
+	// Check Redis cache first
+	cacheKey := fmt.Sprintf("data:dashboard:%d:%s:%s", accountNo, startTime, endTime)
+	if s.rdb != nil {
+		cached, err := s.rdb.Get(ctx, cacheKey).Result()
+		if err == nil && cached != "" {
+			var d vo.DashboardVO
+			if json.Unmarshal([]byte(cached), &d) == nil {
+				return &d, nil
+			}
+		}
+	}
 
 	// Default range: last 30 days
 	if startTime == "" {
@@ -81,6 +97,13 @@ func (s *VisitStatsService) GetDashboard(accountNo int64, startTime, endTime str
 			return nil, err
 		}
 		d.DailyTrend = append(d.DailyTrend, t)
+	}
+
+	// Cache the result in Redis
+	if s.rdb != nil {
+		if data, err := json.Marshal(d); err == nil {
+			s.rdb.Set(ctx, cacheKey, string(data), dashboardCacheTTL)
+		}
 	}
 
 	return d, nil

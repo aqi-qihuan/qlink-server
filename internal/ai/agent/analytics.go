@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/aqi/qlink-server/internal/ai/llm"
 )
@@ -80,5 +81,63 @@ Example response:
 			Explanation: resp,
 		}, nil
 	}
+
+	// Validate SQL safety before returning
+	if result.SQL != "" {
+		if err := ValidateSQL(result.SQL); err != nil {
+			return nil, err
+		}
+	}
 	return &result, nil
+}
+
+// dangerousSQLKeywords are SQL keywords that modify or delete data.
+var dangerousSQLKeywords = []string{
+	"DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "TRUNCATE",
+	"CREATE", "REPLACE", "RENAME", "GRANT", "REVOKE",
+}
+
+// ValidateSQL checks that the generated SQL is a safe SELECT-only query.
+func ValidateSQL(sql string) error {
+	upper := strings.TrimSpace(strings.ToUpper(sql))
+
+	// Must start with SELECT or WITH (CTE)
+	if !strings.HasPrefix(upper, "SELECT") && !strings.HasPrefix(upper, "WITH") {
+		return fmt.Errorf("SQL must be a SELECT query, got: %s", upper[:min(len(upper), 20)])
+	}
+
+	// Check for dangerous keywords as whole words
+	for _, keyword := range dangerousSQLKeywords {
+		// Use word boundary check: keyword must be preceded by space/start and followed by space/end
+		idx := 0
+		for {
+			pos := strings.Index(upper[idx:], keyword)
+			if pos == -1 {
+				break
+			}
+			pos += idx
+			end := pos + len(keyword)
+			// Check word boundaries
+			beforeOK := pos == 0 || upper[pos-1] == ' ' || upper[pos-1] == '\n' || upper[pos-1] == '\t' || upper[pos-1] == '(' || upper[pos-1] == ';'
+			afterOK := end >= len(upper) || upper[end] == ' ' || upper[end] == '\n' || upper[end] == '\t' || upper[end] == '(' || upper[end] == ')' || upper[end] == ';'
+			if beforeOK && afterOK {
+				return fmt.Errorf("SQL contains forbidden keyword: %s", keyword)
+			}
+			idx = end
+		}
+	}
+
+	// Reject multiple statements (semicolons outside of quotes)
+	if strings.Count(sql, ";") > 1 {
+		return fmt.Errorf("SQL must not contain multiple statements")
+	}
+
+	return nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

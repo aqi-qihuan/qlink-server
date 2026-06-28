@@ -209,21 +209,22 @@ func (s *TrafficService) DeleteExpireTraffic() {
 }
 
 // HandleTrafficMessage processes traffic-related MQ events.
-func (s *TrafficService) HandleTrafficMessage(eventMsg *model.EventMessage) {
+func (s *TrafficService) HandleTrafficMessage(eventMsg *model.EventMessage) error {
 	switch eventMsg.EventMessageType {
 	case string(enums.PRODUCT_ORDER_PAY):
-		s.handleOrderPay(eventMsg)
+		return s.handleOrderPay(eventMsg)
 	case string(enums.TRAFFIC_FREE_INIT):
-		s.handleFreeInit(eventMsg)
+		return s.handleFreeInit(eventMsg)
 	case string(enums.TRAFFIC_USED):
-		s.handleTrafficUsed(eventMsg)
+		return s.handleTrafficUsed(eventMsg)
 	default:
 		log.Printf("[MQ] unknown traffic event type: %s", eventMsg.EventMessageType)
+		return fmt.Errorf("unknown traffic event type: %s", eventMsg.EventMessageType)
 	}
 }
 
 // handleOrderPay processes PRODUCT_ORDER_PAY: creates a traffic pack from a paid order.
-func (s *TrafficService) handleOrderPay(eventMsg *model.EventMessage) {
+func (s *TrafficService) handleOrderPay(eventMsg *model.EventMessage) error {
 	type OrderPayContent struct {
 		OutTradeNo string `json:"outTradeNo"`
 		BuyNum     int    `json:"buyNum"`
@@ -238,7 +239,7 @@ func (s *TrafficService) handleOrderPay(eventMsg *model.EventMessage) {
 	var content OrderPayContent
 	if err := json.Unmarshal([]byte(eventMsg.Content), &content); err != nil {
 		log.Printf("[MQ] unmarshal order pay content error: %v", err)
-		return
+		return err
 	}
 
 	accountNo := eventMsg.AccountNo
@@ -260,7 +261,7 @@ func (s *TrafficService) handleOrderPay(eventMsg *model.EventMessage) {
 	tableName := getTrafficTableName(accountNo)
 	if err := s.dbs[dbIdx].Table(tableName).Create(&traffic).Error; err != nil {
 		log.Printf("[MQ] insert traffic error: %v", err)
-		return
+		return err
 	}
 
 	// Delete Redis cache to force recalculation
@@ -285,10 +286,11 @@ func (s *TrafficService) handleOrderPay(eventMsg *model.EventMessage) {
 			log.Printf("[MQ] updated user auth: accountNo=%d, authLevel=%s, rows=%d", accountNo, authLevel, result.RowsAffected)
 		}
 	}
+	return nil
 }
 
 // handleFreeInit processes TRAFFIC_FREE_INIT: creates a free traffic pack on registration.
-func (s *TrafficService) handleFreeInit(eventMsg *model.EventMessage) {
+func (s *TrafficService) handleFreeInit(eventMsg *model.EventMessage) error {
 	accountNo := eventMsg.AccountNo
 	today := time.Now()
 
@@ -309,15 +311,16 @@ func (s *TrafficService) handleFreeInit(eventMsg *model.EventMessage) {
 	tableName := getTrafficTableName(accountNo)
 	if err := s.dbs[dbIdx].Table(tableName).Create(&traffic).Error; err != nil {
 		log.Printf("[MQ] insert free traffic error: %v", err)
-		return
+		return err
 	}
 	log.Printf("[MQ] created free traffic pack for account %d", accountNo)
+	return nil
 }
 
 // handleTrafficUsed processes TRAFFIC_USED: rollback if short link was not created.
 // The BizId is the traffic_task ID. If the task is still in LOCK state, it means
 // the short link creation failed and we need to rollback the day_used deduction.
-func (s *TrafficService) handleTrafficUsed(eventMsg *model.EventMessage) {
+func (s *TrafficService) handleTrafficUsed(eventMsg *model.EventMessage) error {
 	accountNo := eventMsg.AccountNo
 	dbIdx := getTrafficDBIndex(accountNo)
 
@@ -325,13 +328,13 @@ func (s *TrafficService) handleTrafficUsed(eventMsg *model.EventMessage) {
 	var task accountmodel.TrafficTaskDO
 	if err := s.dbs[dbIdx].Where("id = ? AND account_no = ?", eventMsg.BizId, accountNo).First(&task).Error; err != nil {
 		log.Printf("[MQ] traffic task not found: %s, account %d", eventMsg.BizId, accountNo)
-		return
+		return err
 	}
 
 	// If task is still LOCK, the short link was not created successfully
 	if task.LockState != string(enums.TASK_LOCK) {
 		log.Printf("[MQ] traffic task %s already in state %s, skip rollback", eventMsg.BizId, task.LockState)
-		return
+		return nil
 	}
 
 	// Rollback: decrement day_used on the traffic pack
@@ -341,7 +344,7 @@ func (s *TrafficService) handleTrafficUsed(eventMsg *model.EventMessage) {
 		Update("day_used", gorm.Expr("day_used - 1"))
 	if result.Error != nil {
 		log.Printf("[MQ] rollback day_used failed: %v", result.Error)
-		return
+		return result.Error
 	}
 
 	// Update task state to CANCEL
@@ -355,6 +358,7 @@ func (s *TrafficService) handleTrafficUsed(eventMsg *model.EventMessage) {
 	s.rdb.Incr(context.Background(), remainKey)
 
 	log.Printf("[MQ] rolled back traffic for task %s, account %d, rows=%d", eventMsg.BizId, accountNo, result.RowsAffected)
+	return nil
 }
 
 // ClaimFree lets a logged-in user claim the daily free traffic pack (1 per day).

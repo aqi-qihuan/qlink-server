@@ -2,6 +2,7 @@ package listener
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/aqi/qlink-server/internal/common/enums"
@@ -21,7 +22,9 @@ func StartUpdateMappingListener(rmq *mq.RabbitMQ, svc *service.ShortLinkService)
 		}
 		eventMsg.EventMessageType = string(enums.SHORT_LINK_UPDATE_MAPPING)
 		log.Printf("[MQ] consuming update_mapping, messageId=%s", eventMsg.MessageId)
-		svc.HandleUpdateShortLink(&eventMsg)
+		if ok := svc.HandleUpdateShortLink(&eventMsg); !ok {
+			return fmt.Errorf("update_mapping handler failed for messageId=%s", eventMsg.MessageId)
+		}
 		return nil
 	}
 	if err := rmq.Consume(config.QueueUpdateMapping, "update_mapping_consumer", handler); err != nil {

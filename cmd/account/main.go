@@ -15,6 +15,7 @@ import (
 	"github.com/aqi/qlink-server/internal/common/interceptor"
 	"github.com/aqi/qlink-server/internal/common/middleware"
 	"github.com/aqi/qlink-server/internal/common/mq"
+	"github.com/aqi/qlink-server/internal/common/util"
 	"github.com/aqi/qlink-server/internal/common/registry"
 	"github.com/aqi/qlink-server/internal/common/scheduler"
 	"github.com/aqi/qlink-server/internal/common/sms"
@@ -28,15 +29,20 @@ import (
 func main() {
 	godotenv.Load()
 
+	// Startup security checks
+	if err := util.ValidateJWTSecret(); err != nil {
+		log.Fatalf("[FATAL] %v", err)
+	}
+
 	port := getEnv("PORT", "8001")
-	mysqlHost := getEnv("MYSQL_HOST", "192.168.100.21")
+	mysqlHost := getEnv("MYSQL_HOST", "192.168.192.21")
 	mysqlPort := getEnv("MYSQL_PORT", "3307")
 	mysqlUser := getEnv("MYSQL_USER", "root")
 	mysqlPwd := getEnv("MYSQL_PWD", "aqi1015!")
-	redisHost := getEnv("REDIS_HOST", "192.168.100.21")
+	redisHost := getEnv("REDIS_HOST", "192.168.192.21")
 	redisPort := getEnv("REDIS_PORT", "6379")
 	redisPwd := getEnv("REDIS_PWD", "aqi1015")
-	rabbitURL := getEnv("RABBITMQ_URL", "amqp://admin:password@192.168.100.21:5672/")
+	rabbitURL := getEnv("RABBITMQ_URL", "amqp://admin:password@192.168.192.21:5672/")
 	shopServiceURL := getEnv("SHOP_SERVICE", "http://localhost:8005")
 	storageType := getEnv("STORAGE_TYPE", "local") // "local" or "minio"
 
@@ -85,7 +91,7 @@ func main() {
 
 	// Services
 	notifySvc := service.NewNotifyService(rdb, smsProv)
-	accountSvc := service.NewAccountService(db, rmq, notifySvc)
+	accountSvc := service.NewAccountService(db, rdb, rmq, notifySvc)
 	trafficSvc := service.NewTrafficService(trafficDBs, rdb, rmq, shopServiceURL, db)
 	apiTokenSvc := service.NewApiTokenService(db)
 
@@ -120,7 +126,7 @@ func main() {
 		minioBucket := getEnv("MINIO_BUCKET", "aqicloud")
 		minioAccessKey := getEnv("MINIO_ACCESS_KEY", "minioadmin")
 		minioSecretKey := getEnv("MINIO_SECRET_KEY", "minioadmin")
-		minioPublicURL := getEnv("MINIO_PUBLIC_URL", "http://192.168.100.21:9000/aqicloud")
+		minioPublicURL := getEnv("MINIO_PUBLIC_URL", "http://192.168.192.21:9000/aqicloud")
 		useSSL := getEnv("MINIO_USE_SSL", "false") == "true"
 		store = storage.NewMinIOStorage(minioEndpoint, minioBucket, minioAccessKey, minioSecretKey, useSSL, minioPublicURL)
 		log.Printf("Using MinIO storage: %s/%s", minioEndpoint, minioBucket)

@@ -181,23 +181,25 @@ func (s *OrderService) QueryState(accountNo int64, outTradeNo string) (string, e
 }
 
 // HandleProductOrderMessage processes order MQ events.
-func (s *OrderService) HandleProductOrderMessage(eventMsg *model.EventMessage) {
+func (s *OrderService) HandleProductOrderMessage(eventMsg *model.EventMessage) error {
 	switch eventMsg.EventMessageType {
 	case string(enums.PRODUCT_ORDER_NEW):
-		s.closeProductOrder(eventMsg)
+		return s.closeProductOrder(eventMsg)
 	case string(enums.PRODUCT_ORDER_PAY):
-		s.updateOrderToPaid(eventMsg)
+		return s.updateOrderToPaid(eventMsg)
+	default:
+		return fmt.Errorf("unknown order event type: %s", eventMsg.EventMessageType)
 	}
 }
 
 // closeProductOrder handles the delayed order close event.
 // Before cancelling, it queries the third-party payment status to avoid cancelling paid orders.
-func (s *OrderService) closeProductOrder(eventMsg *model.EventMessage) {
+func (s *OrderService) closeProductOrder(eventMsg *model.EventMessage) error {
 	tbl := orderTableName(eventMsg.AccountNo)
 	var order shopdb.ProductOrderDO
 	if err := s.db.Table(tbl).Where("out_trade_no = ? AND state = ?", eventMsg.BizId, string(enums.ORDER_NEW)).First(&order).Error; err != nil {
 		log.Printf("[MQ] order not found or already processed: %s", eventMsg.BizId)
-		return
+		return nil
 	}
 
 	// Query payment status from third-party provider
@@ -231,7 +233,7 @@ func (s *OrderService) closeProductOrder(eventMsg *model.EventMessage) {
 						}
 						s.rmq.PublishJSON("order.event.exchange", "order.update.traffic.routing.key", trafficMsg)
 					}
-					return
+					return nil
 				}
 			}
 		}
@@ -239,10 +241,11 @@ func (s *OrderService) closeProductOrder(eventMsg *model.EventMessage) {
 
 	s.db.Table(tbl).Where("out_trade_no = ? AND state = ?", eventMsg.BizId, string(enums.ORDER_NEW)).Update("state", string(enums.ORDER_CANCEL))
 	log.Printf("[MQ] cancelled order: %s", eventMsg.BizId)
+	return nil
 }
 
 // updateOrderToPaid updates order state from NEW to PAY.
-func (s *OrderService) updateOrderToPaid(eventMsg *model.EventMessage) {
+func (s *OrderService) updateOrderToPaid(eventMsg *model.EventMessage) error {
 	tables := []string{orderTableName(eventMsg.AccountNo)}
 	if eventMsg.AccountNo == 0 {
 		// AccountNo not provided (e.g. from payment callback), try both tables
@@ -258,8 +261,9 @@ func (s *OrderService) updateOrderToPaid(eventMsg *model.EventMessage) {
 		}
 		if result.RowsAffected > 0 {
 			log.Printf("[MQ] order marked as paid: %s on %s, rows=%d", eventMsg.BizId, tbl, result.RowsAffected)
-			return
+			return nil
 		}
 	}
 	log.Printf("[MQ] order not found or already processed: %s", eventMsg.BizId)
+	return nil
 }
