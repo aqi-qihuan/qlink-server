@@ -171,6 +171,13 @@ func (s *AccountService) Update(accountNo int64, req *request.AccountUpdateReque
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("account not found")
 	}
+
+	// Invalidate detail cache after successful update
+	if s.rdb != nil {
+		cacheKey := fmt.Sprintf("account:detail:%d", accountNo)
+		s.rdb.Del(context.Background(), cacheKey)
+	}
+
 	return nil
 }
 

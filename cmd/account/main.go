@@ -122,11 +122,11 @@ func main() {
 	var store storage.Storage
 	switch storageType {
 	case "minio":
-		minioEndpoint := getEnv("MINIO_ENDPOINT", "minio:9000")
-		minioBucket := getEnv("MINIO_BUCKET", "aqicloud")
+		minioEndpoint := getEnv("MINIO_ENDPOINT", "192.168.192.21:9000")
+		minioBucket := getEnv("MINIO_BUCKET", "aqicloud-link")
 		minioAccessKey := getEnv("MINIO_ACCESS_KEY", "minioadmin")
-		minioSecretKey := getEnv("MINIO_SECRET_KEY", "minioadmin")
-		minioPublicURL := getEnv("MINIO_PUBLIC_URL", "http://192.168.192.21:9000/aqicloud")
+		minioSecretKey := getEnv("MINIO_SECRET_KEY", "minioadmin123")
+		minioPublicURL := getEnv("MINIO_PUBLIC_URL", "http://192.168.192.21:9000/aqicloud-link")
 		useSSL := getEnv("MINIO_USE_SSL", "false") == "true"
 		store = storage.NewMinIOStorage(minioEndpoint, minioBucket, minioAccessKey, minioSecretKey, useSSL, minioPublicURL)
 		log.Printf("Using MinIO storage: %s/%s", minioEndpoint, minioBucket)

@@ -6,19 +6,32 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
 
 // newS3Request creates an HTTP request with AWS S3 Signature V4.
 // Minimal implementation for MinIO compatibility.
-func newS3Request(method, url string, body []byte, bucket, objectKey, accessKey, secretKey, contentType string) (*http.Request, error) {
+func newS3Request(method, rawURL string, body []byte, bucket, objectKey, accessKey, secretKey, contentType string) (*http.Request, error) {
+	// Build URL with properly encoded object key path
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse url: %w", err)
+	}
+	// Encode each path segment individually, preserving '/'
+	segments := strings.Split(objectKey, "/")
+	for i, seg := range segments {
+		segments[i] = url.PathEscape(seg)
+	}
+	u.Path = "/" + bucket + "/" + strings.Join(segments, "/")
+
 	var bodyReader io.Reader
 	if body != nil {
 		bodyReader = strings.NewReader(string(body))
 	}
 
-	req, err := http.NewRequest(method, url, bodyReader)
+	req, err := http.NewRequest(method, u.String(), bodyReader)
 	if err != nil {
 		return nil, err
 	}
@@ -27,21 +40,36 @@ func newS3Request(method, url string, body []byte, bucket, objectKey, accessKey,
 	dateStr := now.Format("20060102T150405Z")
 	dateShort := now.Format("20060102")
 
-	req.Header.Set("Host", req.Host)
+	hostValue := req.Host
+	req.Header.Set("Host", hostValue)
 	req.Header.Set("X-Amz-Date", dateStr)
+
+	// Compute payload hash
+	payloadHash := sha256Hex(body)
+	req.Header.Set("X-Amz-Content-Sha256", payloadHash)
+
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
 
-	// Compute payload hash
-	payloadHash := sha256Hex(body)
+	// Build canonical headers (must be sorted alphabetically, lowercase keys)
+	var canonicalHeaders string
+	var signedHeaders string
+	if contentType != "" {
+		canonicalHeaders = fmt.Sprintf("content-type:%s\nhost:%s\nx-amz-content-sha256:%s\nx-amz-date:%s\n",
+			contentType, hostValue, payloadHash, dateStr)
+		signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date"
+	} else {
+		canonicalHeaders = fmt.Sprintf("host:%s\nx-amz-content-sha256:%s\nx-amz-date:%s\n",
+			hostValue, payloadHash, dateStr)
+		signedHeaders = "host;x-amz-content-sha256;x-amz-date"
+	}
 
-	// Canonical request
-	canonicalHeaders := fmt.Sprintf("host:%s\nx-amz-date:%s\n", req.Host, dateStr)
-	signedHeaders := "host;x-amz-date"
+	// Canonical URI — use the URL-encoded path
+	canonicalURI := u.Path
 
-	canonicalRequest := fmt.Sprintf("%s\n/%s/%s\n\n%s\n%s\n%s",
-		method, bucket, objectKey,
+	canonicalRequest := fmt.Sprintf("%s\n%s\n\n%s\n%s\n%s",
+		method, canonicalURI,
 		canonicalHeaders, signedHeaders, payloadHash)
 
 	// String to sign

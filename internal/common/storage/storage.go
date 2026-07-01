@@ -1,12 +1,18 @@
 package storage
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 // Storage defines the interface for file storage backends.
@@ -59,79 +65,68 @@ func (s *LocalStorage) GetURL(objectKey string) string {
 	return strings.TrimRight(s.baseURL, "/") + "/" + strings.TrimLeft(objectKey, "/")
 }
 
-// MinIOStorage stores files in MinIO (S3-compatible).
+// MinIOStorage stores files in MinIO using the official minio-go SDK.
 type MinIOStorage struct {
-	endpoint  string // e.g. "minio:9000"
-	bucket    string // e.g. "aqicloud"
-	accessKey string
-	secretKey string
-	useSSL    bool
-	publicURL string // e.g. "http://minio:9000/aqicloud"
+	client    *minio.Client
+	bucket    string
+	publicURL string // e.g. "http://192.168.192.21:9000/aqicloud"
 }
 
 func NewMinIOStorage(endpoint, bucket, accessKey, secretKey string, useSSL bool, publicURL string) *MinIOStorage {
-	return &MinIOStorage{
-		endpoint:  endpoint,
-		bucket:    bucket,
-		accessKey: accessKey,
-		secretKey: secretKey,
-		useSSL:    useSSL,
-		publicURL: publicURL,
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure: useSSL,
+	})
+	if err != nil {
+		log.Printf("MinIO client init failed: %v", err)
+		return &MinIOStorage{bucket: bucket, publicURL: publicURL}
 	}
+	return &MinIOStorage{client: client, bucket: bucket, publicURL: publicURL}
 }
 
 func (s *MinIOStorage) Upload(objectKey string, reader io.Reader, contentType string) (string, error) {
-	// Use S3 PutObject via HTTP (no external SDK dependency)
-	// This implements AWS S3 Signature V4 for MinIO compatibility
-	url := fmt.Sprintf("http://%s/%s/%s", s.endpoint, s.bucket, objectKey)
-	if s.useSSL {
-		url = fmt.Sprintf("https://%s/%s/%s", s.endpoint, s.bucket, objectKey)
+	if s.client == nil {
+		return "", fmt.Errorf("minio client not initialized")
 	}
 
-	// Read all data for content-length
+	// Read data to determine size
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		return "", fmt.Errorf("read data failed: %w", err)
 	}
 
-	req, err := newS3Request("PUT", url, data, s.bucket, objectKey, s.accessKey, s.secretKey, contentType)
-	if err != nil {
-		return "", fmt.Errorf("create request failed: %w", err)
+	opts := minio.PutObjectOptions{
+		ContentType: contentType,
 	}
 
-	resp, err := httpClient().Do(req)
+	_, err = s.client.PutObject(
+		context.Background(),
+		s.bucket,
+		objectKey,
+		bytes.NewReader(data),
+		int64(len(data)),
+		opts,
+	)
 	if err != nil {
 		return "", fmt.Errorf("upload failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("upload failed: status=%d body=%s", resp.StatusCode, string(body))
 	}
 
 	return s.GetURL(objectKey), nil
 }
 
 func (s *MinIOStorage) Delete(objectKey string) error {
-	url := fmt.Sprintf("http://%s/%s/%s", s.endpoint, s.bucket, objectKey)
-	if s.useSSL {
-		url = fmt.Sprintf("https://%s/%s/%s", s.endpoint, s.bucket, objectKey)
+	if s.client == nil {
+		return fmt.Errorf("minio client not initialized")
 	}
 
-	req, err := newS3Request("DELETE", url, nil, s.bucket, objectKey, s.accessKey, s.secretKey, "")
+	err := s.client.RemoveObject(
+		context.Background(),
+		s.bucket,
+		objectKey,
+		minio.RemoveObjectOptions{},
+	)
 	if err != nil {
-		return err
-	}
-
-	resp, err := httpClient().Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 204 && resp.StatusCode != 200 {
-		return fmt.Errorf("delete failed: status=%d", resp.StatusCode)
+		return fmt.Errorf("delete failed: %w", err)
 	}
 	return nil
 }
