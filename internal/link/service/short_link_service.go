@@ -184,7 +184,7 @@ func (s *ShortLinkService) HandleDelShortLink(eventMessage *model.EventMessage) 
 		tableName := sharding.GetTableName("short_link", tableSuffix)
 
 		result := s.dbs[dbIdx].Table(tableName).
-			Where("code = ? AND account_no = ?", delReq.Code, accountNo).
+			Where("code = ? AND account_no = ? AND del = 0", delReq.Code, accountNo).
 			Update("del", 1)
 		if result.Error != nil {
 			log.Printf("[MQ] del short_link error: %v", result.Error)
@@ -203,7 +203,7 @@ func (s *ShortLinkService) HandleDelShortLink(eventMessage *model.EventMessage) 
 		tableName := sharding.GetTableName("group_code_mapping", fmt.Sprintf("%d", tableIdx))
 
 		result := s.dbs[dbIdx].Table(tableName).
-			Where("id = ? AND account_no = ? AND group_id = ?", delReq.MappingID, accountNo, delReq.GroupID).
+			Where("id = ? AND account_no = ? AND group_id = ? AND del = 0", delReq.MappingID, accountNo, delReq.GroupID).
 			Update("del", 1)
 		if result.Error != nil {
 			log.Printf("[MQ] del group_code_mapping error: %v", result.Error)

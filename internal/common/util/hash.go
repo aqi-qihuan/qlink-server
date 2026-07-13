@@ -36,12 +36,24 @@ func stringToUTF16LE(s string) []byte {
 
 // JavaStringHashCode implements Java's String.hashCode() algorithm.
 // Used for sharding routing in ShardingDBConfig and ShardingTableConfig.
-// Processes UTF-16 code units (same as Java char).
+// Processes UTF-16 code units (same as Java char), including surrogate pairs
+// for non-BMP characters (e.g. emoji). Previously iterated over runes and
+// masked with 0xFFFF, which dropped the high surrogate and produced
+// different hash values than Java for strings containing non-BMP chars.
 func JavaStringHashCode(s string) int32 {
 	var h int32
 	for _, r := range s {
-		// Java processes char values (UTF-16 code units)
-		h = 31*h + int32(r&0xFFFF)
+		if r <= 0xFFFF {
+			// BMP character: single UTF-16 code unit
+			h = 31*h + int32(r)
+		} else {
+			// Non-BMP: surrogate pair (two UTF-16 code units, matching Java)
+			r -= 0x10000
+			high := uint16(0xD800 + (r>>10)&0x3FF)
+			low := uint16(0xDC00 + r&0x3FF)
+			h = 31*h + int32(high)
+			h = 31*h + int32(low)
+		}
 	}
 	return h
 }

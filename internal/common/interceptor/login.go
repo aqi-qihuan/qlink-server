@@ -45,5 +45,9 @@ func GetLoginUser(c *gin.Context) *model.LoginUser {
 	if !exists {
 		return nil
 	}
-	return val.(*model.LoginUser)
+	lu, ok := val.(*model.LoginUser)
+	if !ok {
+		return nil
+	}
+	return lu
 }

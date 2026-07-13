@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"os"
 
@@ -14,7 +15,10 @@ const defaultRPCToken = "rpc-token-default"
 func RpcTokenMiddleware(expectedToken string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("rpc-token")
-		if token != expectedToken {
+		// Use constant-time comparison to prevent timing attacks.
+		// Previously used != which short-circuits on first mismatch, allowing
+		// attackers to brute-force the token character by character.
+		if subtle.ConstantTimeCompare([]byte(token), []byte(expectedToken)) != 1 {
 			c.AbortWithStatusJSON(200, response.BuildError("invalid rpc-token"))
 			return
 		}

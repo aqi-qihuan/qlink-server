@@ -29,7 +29,10 @@ func (ctrl *DomainController) List(c *gin.Context) {
 		return
 	}
 	var domains []model.DomainDO
-	if err := ctrl.db.Where("del = 0").Find(&domains).Error; err != nil {
+	// Filter by account_no to prevent cross-account data leakage.
+	// account_no = 0 represents system default domains available to all users.
+	// Previously returned all domains from all accounts.
+	if err := ctrl.db.Where("del = 0 AND (account_no = ? OR account_no = 0)", loginUser.AccountNo).Find(&domains).Error; err != nil {
 		response.JSON(c, response.BuildError("query failed"))
 		return
 	}

@@ -127,8 +127,6 @@ func (ctrl *LinkApiController) Dispatch(c *gin.Context) {
 		ctrl.rdb.Expire(ctx, cacheKey, shortLinkCacheTTL)
 	}
 
-	ctrl.sendVisitLog(c, code, fmt.Sprintf("%d", shortLink.AccountNo))
-
 	if shortLink.Del == 1 || shortLink.State == "LOCK" {
 		c.String(http.StatusForbidden, "short link is locked or deleted")
 		return
@@ -137,6 +135,10 @@ func (ctrl *LinkApiController) Dispatch(c *gin.Context) {
 		c.String(http.StatusGone, "short link is inactive")
 		return
 	}
+
+	// Record visit log AFTER status checks pass — previously it was recorded
+	// before, causing PV/UV inflation for locked/inactive links.
+	ctrl.sendVisitLog(c, code, fmt.Sprintf("%d", shortLink.AccountNo))
 
 	// Password check: redirect to preview page instead of target URL
 	if shortLink.Password != "" {

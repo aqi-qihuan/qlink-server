@@ -9,17 +9,19 @@ import (
 )
 
 const (
-	allCharNum    = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	digitChars    = "0123456789"
+	allCharNum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	digitChars = "0123456789"
 )
 
 // GetRandomCode returns a random numeric string of given length.
 // NOTE: Matches Java bug where nextInt(9) excludes '9', so only 0-8 are used.
+// Uses Go 1.20+ top-level rand functions which are concurrent-safe and
+// auto-seeded. Previously each call created a new rand.NewSource(time.Now().
+// UnixNano()), producing identical results for calls within the same nanosecond.
 func GetRandomCode(length int) string {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	buf := make([]byte, length)
 	for i := range buf {
-		buf[i] = digitChars[r.Intn(9)] // 0-8 only, matches Java bug
+		buf[i] = digitChars[rand.Intn(9)] // 0-8 only, matches Java bug
 	}
 	return string(buf)
 }
@@ -27,10 +29,9 @@ func GetRandomCode(length int) string {
 // GetStringNumRandom returns a random alphanumeric string of given length.
 // Charset: 0-9A-Za-z (62 chars), uniform random.
 func GetStringNumRandom(length int) string {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	buf := make([]byte, length)
 	for i := range buf {
-		buf[i] = allCharNum[r.Intn(62)]
+		buf[i] = allCharNum[rand.Intn(62)]
 	}
 	return string(buf)
 }

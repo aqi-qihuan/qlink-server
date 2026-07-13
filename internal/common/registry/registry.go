@@ -27,6 +27,7 @@ type Registry struct {
 	services  map[string][]*ServiceInstance // serviceName -> instances
 	heartbeat time.Duration
 	stopCh    chan struct{}
+	stopOnce  sync.Once
 }
 
 // New creates a new Registry. heartbeat interval controls health-check frequency.
@@ -94,10 +95,12 @@ func (r *Registry) GetInstance(serviceName string) (*ServiceInstance, error) {
 	return instances[idx], nil
 }
 
-// Stop halts all heartbeat goroutines.
+// Stop halts all heartbeat goroutines. Safe to call multiple times.
 func (r *Registry) Stop() {
-	close(r.stopCh)
-	log.Println("[Registry] stopped")
+	r.stopOnce.Do(func() {
+		close(r.stopCh)
+		log.Println("[Registry] stopped")
+	})
 }
 
 // HTTPHandler returns an HTTP handler for /registry endpoints (health + discovery).
@@ -140,15 +143,13 @@ func (r *Registry) heartbeatLoop(inst *ServiceInstance) {
 	for {
 		select {
 		case <-ticker.C:
-			// Mark unhealthy if no heartbeat for 3x interval
+			// Self-registered services refresh their own heartbeat.
+			// Health checking is not needed for self-registration (the service
+			// is alive as long as this goroutine runs). Previously, the code
+			// marked Healthy=false then immediately set Healthy=true, making
+			// the health check a no-op.
 			r.mu.Lock()
-			if time.Since(inst.lastHeartbeat) > 3*r.heartbeat {
-				inst.Healthy = false
-				log.Printf("[Registry] %s marked unhealthy (no heartbeat)", inst.InstanceID)
-			}
-			// Refresh heartbeat (self-registration always stays healthy)
 			inst.lastHeartbeat = time.Now()
-			inst.Healthy = true
 			r.mu.Unlock()
 		case <-r.stopCh:
 			return
