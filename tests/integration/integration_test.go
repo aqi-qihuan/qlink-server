@@ -27,8 +27,8 @@ const (
 
 var (
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "192.168.192.21:6379",
-		Password: "aqi1015",
+		Addr:     "localhost:6379",
+		Password: "",
 	})
 	testPhone    = "138" + fmt.Sprintf("%08d", time.Now().UnixNano()%100000000)
 	testPassword = "Test123456"

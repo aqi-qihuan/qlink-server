@@ -19,7 +19,11 @@ func main() {
 	port := getEnv("PORT", "8006")
 
 	cfg := aiconfig.DefaultConfig()
-	aiHandler := handler.NewAIHandler(cfg)
+	cm, err := cfg.NewChatModel()
+	if err != nil {
+		log.Fatalf("init chat model failed: %v", err)
+	}
+	aiHandler := handler.NewAIHandler(cm)
 
 	r := gin.Default()
 	r.Use(middleware.CorsMiddleware())

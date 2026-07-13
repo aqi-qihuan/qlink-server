@@ -5,17 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/schema"
+
 	"github.com/aqi/qlink-server/internal/ai/llm"
 )
 
 // URLSafetyAgent detects malicious URLs before creating short links.
 type URLSafetyAgent struct {
-	client *llm.Client
+	chatModel model.ChatModel
 }
 
-func NewURLSafetyAgent(apiKey, baseURL, model string) *URLSafetyAgent {
+func NewURLSafetyAgent(cm model.ChatModel) *URLSafetyAgent {
 	return &URLSafetyAgent{
-		client: llm.NewClient(baseURL, apiKey, model),
+		chatModel: cm,
 	}
 }
 
@@ -27,9 +30,7 @@ type SafetyResult struct {
 	Score  float64  `json:"score"`          // 0.0 (safe) to 1.0 (dangerous)
 }
 
-// Analyze checks if a URL is potentially malicious.
-func (a *URLSafetyAgent) Analyze(ctx context.Context, url string) (*SafetyResult, error) {
-	systemPrompt := `You are a URL security analyst. Analyze the given URL for safety concerns.
+const safetySystemPrompt = `You are a URL security analyst. Analyze the given URL for safety concerns.
 Check for: phishing, malware distribution, scam patterns, gambling, adult content, fraud.
 
 Return a JSON object with:
@@ -40,17 +41,22 @@ Return a JSON object with:
 
 Return ONLY valid JSON, no other text.`
 
-	messages := []llm.ChatMessage{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: fmt.Sprintf("Analyze this URL: %s", url)},
+// Analyze checks if a URL is potentially malicious.
+func (a *URLSafetyAgent) Analyze(ctx context.Context, url string) (*SafetyResult, error) {
+	messages := []*schema.Message{
+		schema.SystemMessage(safetySystemPrompt),
+		schema.UserMessage(fmt.Sprintf("Analyze this URL: %s", url)),
 	}
 
-	resp, err := a.client.Chat(messages, 512, 0.3)
+	resp, err := a.chatModel.Generate(ctx, messages,
+		model.WithMaxTokens(2048),
+		model.WithTemperature(0.3),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("LLM call failed: %w", err)
 	}
 
-	jsonStr := llm.ExtractJSON(resp)
+	jsonStr := llm.ExtractJSON(resp.Content)
 
 	var result SafetyResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
@@ -58,7 +64,7 @@ Return ONLY valid JSON, no other text.`
 		return &SafetyResult{
 			Safe:   true,
 			Score:  0.0,
-			Reason: resp,
+			Reason: resp.Content,
 		}, nil
 	}
 	return &result, nil

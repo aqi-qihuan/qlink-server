@@ -6,17 +6,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/schema"
+
 	"github.com/aqi/qlink-server/internal/ai/llm"
 )
 
 // AnalyticsAgent converts natural language questions into ClickHouse SQL queries.
 type AnalyticsAgent struct {
-	client *llm.Client
+	chatModel model.ChatModel
 }
 
-func NewAnalyticsAgent(apiKey, baseURL, model string) *AnalyticsAgent {
+func NewAnalyticsAgent(cm model.ChatModel) *AnalyticsAgent {
 	return &AnalyticsAgent{
-		client: llm.NewClient(baseURL, apiKey, model),
+		chatModel: cm,
 	}
 }
 
@@ -28,22 +31,25 @@ type AnalyticsResult struct {
 
 const clickHouseSchema = `Table: visit_stats (ClickHouse MergeTree)
 Columns:
-  code          String    -- 短链??  referer       String    -- 来源页面
-  is_new        String    -- 是否新访??('0'/'1')
+  code          String    -- 短链码
+  referer       String    -- 来源页面
+  is_new        String    -- 是否新访问 ('0'/'1')
   account_no    UInt64    -- 账号编号
   province      String    -- 省份
   city          String    -- 城市
   ip            String    -- 访客IP
-  browser_name  String    -- 浏览??  os            String    -- 操作系统
+  browser_name  String    -- 浏览器
+  os            String    -- 操作系统
   device_type   String    -- 设备类型 (PC/Mobile/Tablet)
-  pv            UInt64    -- 页面浏览??  uv            UInt64    -- 独立访客??  start_time    DateTime  -- 访问开始时??  end_time      DateTime  -- 访问结束时间
-  ts            UInt64    -- 访问时间??毫秒)
+  pv            UInt64    -- 页面浏览量
+  uv            UInt64    -- 独立访客数
+  start_time    DateTime  -- 访问开始时间
+  end_time      DateTime  -- 访问结束时间
+  ts            UInt64    -- 访问时间戳(毫秒)
 
 ClickHouse specific functions: toYYYYMMDD(), toHour(), toMinute(), toYYYYMMDDhhmmss()`
 
-// Query converts a natural language question into a ClickHouse SQL query.
-func (a *AnalyticsAgent) Query(ctx context.Context, question string, shortLinkCode string) (*AnalyticsResult, error) {
-	systemPrompt := fmt.Sprintf(`You are a ClickHouse SQL expert. Given the table schema below, generate a SQL query to answer the user's question.
+const analyticsSystemPrompt = `You are a ClickHouse SQL expert. Given the table schema below, generate a SQL query to answer the user's question.
 
 %s
 
@@ -55,30 +61,37 @@ Rules:
 5. Return ONLY valid JSON, no other text.
 
 Example response:
-{"sql": "SELECT count() FROM visit_stats WHERE code = 'abc'", "explanation": "查询短链abc的总访问量"}`, clickHouseSchema)
+{"sql": "SELECT count() FROM visit_stats WHERE code = 'abc'", "explanation": "查询短链abc的总访问量"}`
+
+// Query converts a natural language question into a ClickHouse SQL query.
+func (a *AnalyticsAgent) Query(ctx context.Context, question string, shortLinkCode string) (*AnalyticsResult, error) {
+	systemPrompt := fmt.Sprintf(analyticsSystemPrompt, clickHouseSchema)
 
 	userMsg := fmt.Sprintf("Question: %s", question)
 	if shortLinkCode != "" {
 		userMsg = fmt.Sprintf("Short link code: %s\nQuestion: %s", shortLinkCode, question)
 	}
 
-	messages := []llm.ChatMessage{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userMsg},
+	messages := []*schema.Message{
+		schema.SystemMessage(systemPrompt),
+		schema.UserMessage(userMsg),
 	}
 
-	resp, err := a.client.Chat(messages, 1024, 0.3)
+	resp, err := a.chatModel.Generate(ctx, messages,
+		model.WithMaxTokens(4096),
+		model.WithTemperature(0.3),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("LLM call failed: %w", err)
 	}
 
-	jsonStr := llm.ExtractJSON(resp)
+	jsonStr := llm.ExtractJSON(resp.Content)
 
 	var result AnalyticsResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		// Fallback: return raw response as explanation
 		return &AnalyticsResult{
-			Explanation: resp,
+			Explanation: resp.Content,
 		}, nil
 	}
 

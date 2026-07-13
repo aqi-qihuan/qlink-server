@@ -1,6 +1,12 @@
 package config
 
-import "os"
+import (
+	"context"
+	"os"
+
+	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino-ext/components/model/openai"
+)
 
 // AIConfig holds configuration for AI features.
 type AIConfig struct {
@@ -23,6 +29,16 @@ func DefaultConfig() *AIConfig {
 		MaxTokens:   4096,
 		Temperature: 0.7,
 	}
+}
+
+// NewChatModel creates an Eino ChatModel using OpenAI-compatible protocol.
+// Works with Ollama, OpenAI, DeepSeek, Doubao, and any OpenAI-compatible provider.
+func (c *AIConfig) NewChatModel() (model.ChatModel, error) {
+	return openai.NewChatModel(context.Background(), &openai.ChatModelConfig{
+		Model:   c.ModelName,
+		APIKey:  c.APIKey,
+		BaseURL: c.BaseURL,
+	})
 }
 
 func getEnv(key, defaultVal string) string {

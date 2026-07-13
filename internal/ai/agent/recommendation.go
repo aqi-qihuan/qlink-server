@@ -5,17 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/schema"
+
 	"github.com/aqi/qlink-server/internal/ai/llm"
 )
 
 // RecommendationAgent provides smart short link recommendations.
 type RecommendationAgent struct {
-	client *llm.Client
+	chatModel model.ChatModel
 }
 
-func NewRecommendationAgent(apiKey, baseURL, model string) *RecommendationAgent {
+func NewRecommendationAgent(cm model.ChatModel) *RecommendationAgent {
 	return &RecommendationAgent{
-		client: llm.NewClient(baseURL, apiKey, model),
+		chatModel: cm,
 	}
 }
 
@@ -27,9 +30,7 @@ type RecommendationResult struct {
 	Summary      string   `json:"summary"`
 }
 
-// Recommend analyzes a URL and returns suggested title/group/tags.
-func (a *RecommendationAgent) Recommend(ctx context.Context, url string) (*RecommendationResult, error) {
-	systemPrompt := `You are a URL analysis assistant. Analyze the given URL and return a JSON object with these fields:
+const recommendationSystemPrompt = `You are a URL analysis assistant. Analyze the given URL and return a JSON object with these fields:
 - "title": a concise Chinese title (max 20 chars)
 - "group_suggest": a suggested group/category name in Chinese
 - "tags": an array of 2-4 relevant tags in Chinese
@@ -37,24 +38,29 @@ func (a *RecommendationAgent) Recommend(ctx context.Context, url string) (*Recom
 
 Return ONLY valid JSON, no other text.`
 
-	messages := []llm.ChatMessage{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: fmt.Sprintf("Analyze this URL: %s", url)},
+// Recommend analyzes a URL and returns suggested title/group/tags.
+func (a *RecommendationAgent) Recommend(ctx context.Context, url string) (*RecommendationResult, error) {
+	messages := []*schema.Message{
+		schema.SystemMessage(recommendationSystemPrompt),
+		schema.UserMessage(fmt.Sprintf("Analyze this URL: %s", url)),
 	}
 
-	resp, err := a.client.Chat(messages, 512, 0.7)
+	resp, err := a.chatModel.Generate(ctx, messages,
+		model.WithMaxTokens(2048),
+		model.WithTemperature(0.7),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("LLM call failed: %w", err)
 	}
 
-	jsonStr := llm.ExtractJSON(resp)
+	jsonStr := llm.ExtractJSON(resp.Content)
 
 	var result RecommendationResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		// Fallback: return raw response as summary
 		return &RecommendationResult{
 			Title:   "",
-			Summary: resp,
+			Summary: resp.Content,
 		}, nil
 	}
 	return &result, nil

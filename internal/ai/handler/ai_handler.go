@@ -1,11 +1,12 @@
 package handler
 
 import (
+	"github.com/cloudwego/eino/components/model"
+	"github.com/gin-gonic/gin"
+
 	"github.com/aqi/qlink-server/internal/ai/agent"
-	"github.com/aqi/qlink-server/internal/ai/config"
 	"github.com/aqi/qlink-server/internal/common/interceptor"
 	"github.com/aqi/qlink-server/internal/common/response"
-	"github.com/gin-gonic/gin"
 )
 
 // AIHandler exposes AI features as HTTP endpoints.
@@ -15,11 +16,11 @@ type AIHandler struct {
 	safety    *agent.URLSafetyAgent
 }
 
-func NewAIHandler(cfg *config.AIConfig) *AIHandler {
+func NewAIHandler(cm model.ChatModel) *AIHandler {
 	return &AIHandler{
-		recommend: agent.NewRecommendationAgent(cfg.APIKey, cfg.BaseURL, cfg.ModelName),
-		analytics: agent.NewAnalyticsAgent(cfg.APIKey, cfg.BaseURL, cfg.ModelName),
-		safety:    agent.NewURLSafetyAgent(cfg.APIKey, cfg.BaseURL, cfg.ModelName),
+		recommend: agent.NewRecommendationAgent(cm),
+		analytics: agent.NewAnalyticsAgent(cm),
+		safety:    agent.NewURLSafetyAgent(cm),
 	}
 }
 
