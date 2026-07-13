@@ -12,7 +12,13 @@ import (
 )
 
 func main() {
-	dsn := "root:aqi1015!@tcp(192.168.192.21:3307)/?charset=utf8mb4&parseTime=true&multiStatements=true"
+	mysqlHost := getEnv("MYSQL_HOST", "localhost")
+	mysqlPort := getEnv("MYSQL_PORT", "3306")
+	mysqlUser := getEnv("MYSQL_USER", "root")
+	mysqlPwd := getEnv("MYSQL_PWD", "")
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=true&multiStatements=true",
+		mysqlUser, mysqlPwd, mysqlHost, mysqlPort)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("connect failed: %v", err)
@@ -61,4 +67,11 @@ func main() {
 	}
 
 	fmt.Println("Done")
+}
+
+func getEnv(key, defaultVal string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultVal
 }

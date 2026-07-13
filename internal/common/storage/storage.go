@@ -69,7 +69,7 @@ func (s *LocalStorage) GetURL(objectKey string) string {
 type MinIOStorage struct {
 	client    *minio.Client
 	bucket    string
-	publicURL string // e.g. "http://192.168.192.21:9000/aqicloud"
+	publicURL string // e.g. "http://localhost:9000/aqicloud"
 }
 
 func NewMinIOStorage(endpoint, bucket, accessKey, secretKey string, useSSL bool, publicURL string) *MinIOStorage {

@@ -37,9 +37,9 @@ func main() {
 	aiAddr := getEnv("AI_SERVICE", "http://localhost:8006")
 
 	// Redis for distributed rate limiting
-	redisHost := getEnv("REDIS_HOST", "192.168.192.21")
+	redisHost := getEnv("REDIS_HOST", "localhost")
 	redisPort := getEnv("REDIS_PORT", "6379")
-	redisPwd := getEnv("REDIS_PWD", "aqi1015")
+	redisPwd := getEnv("REDIS_PWD", "")
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
 		Password: redisPwd,

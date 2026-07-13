@@ -38,15 +38,15 @@ func main() {
 	}
 
 	port := getEnv("PORT", "8003")
-	mysqlHost := getEnv("MYSQL_HOST", "192.168.192.21")
-	mysqlPort := getEnv("MYSQL_PORT", "3307")
+	mysqlHost := getEnv("MYSQL_HOST", "localhost")
+	mysqlPort := getEnv("MYSQL_PORT", "3306")
 	mysqlUser := getEnv("MYSQL_USER", "root")
-	mysqlPwd := getEnv("MYSQL_PWD", "aqi1015!")
-	redisHost := getEnv("REDIS_HOST", "192.168.192.21")
+	mysqlPwd := getEnv("MYSQL_PWD", "")
+	redisHost := getEnv("REDIS_HOST", "localhost")
 	redisPort := getEnv("REDIS_PORT", "6379")
-	redisPwd := getEnv("REDIS_PWD", "aqi1015")
-	rabbitURL := getEnv("RABBITMQ_URL", "amqp://admin:password@192.168.192.21:5672/")
-	kafkaBrokers := getEnv("KAFKA_BROKERS", "192.168.192.21:9092")
+	redisPwd := getEnv("REDIS_PWD", "")
+	rabbitURL := getEnv("RABBITMQ_URL", "")
+	kafkaBrokers := getEnv("KAFKA_BROKERS", "localhost:9092")
 	accountAddr := getEnv("ACCOUNT_SERVICE", "http://localhost:8001")
 	rpcToken := getEnv("RPC_TOKEN", "rpc-token-default")
 

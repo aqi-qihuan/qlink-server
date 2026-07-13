@@ -35,14 +35,14 @@ func main() {
 	}
 
 	port := getEnv("PORT", "8001")
-	mysqlHost := getEnv("MYSQL_HOST", "192.168.192.21")
-	mysqlPort := getEnv("MYSQL_PORT", "3307")
+	mysqlHost := getEnv("MYSQL_HOST", "localhost")
+	mysqlPort := getEnv("MYSQL_PORT", "3306")
 	mysqlUser := getEnv("MYSQL_USER", "root")
-	mysqlPwd := getEnv("MYSQL_PWD", "aqi1015!")
-	redisHost := getEnv("REDIS_HOST", "192.168.192.21")
+	mysqlPwd := getEnv("MYSQL_PWD", "")
+	redisHost := getEnv("REDIS_HOST", "localhost")
 	redisPort := getEnv("REDIS_PORT", "6379")
-	redisPwd := getEnv("REDIS_PWD", "aqi1015")
-	rabbitURL := getEnv("RABBITMQ_URL", "amqp://admin:password@192.168.192.21:5672/")
+	redisPwd := getEnv("REDIS_PWD", "")
+	rabbitURL := getEnv("RABBITMQ_URL", "")
 	shopServiceURL := getEnv("SHOP_SERVICE", "http://localhost:8005")
 	storageType := getEnv("STORAGE_TYPE", "local") // "local" or "minio"
 
@@ -122,11 +122,11 @@ func main() {
 	var store storage.Storage
 	switch storageType {
 	case "minio":
-		minioEndpoint := getEnv("MINIO_ENDPOINT", "192.168.192.21:9000")
+		minioEndpoint := getEnv("MINIO_ENDPOINT", "localhost:9000")
 		minioBucket := getEnv("MINIO_BUCKET", "aqicloud-link")
-		minioAccessKey := getEnv("MINIO_ACCESS_KEY", "minioadmin")
-		minioSecretKey := getEnv("MINIO_SECRET_KEY", "minioadmin123")
-		minioPublicURL := getEnv("MINIO_PUBLIC_URL", "http://192.168.192.21:9000/aqicloud-link")
+		minioAccessKey := getEnv("MINIO_ACCESS_KEY", "")
+		minioSecretKey := getEnv("MINIO_SECRET_KEY", "")
+		minioPublicURL := getEnv("MINIO_PUBLIC_URL", "http://localhost:9000/aqicloud-link")
 		useSSL := getEnv("MINIO_USE_SSL", "false") == "true"
 		store = storage.NewMinIOStorage(minioEndpoint, minioBucket, minioAccessKey, minioSecretKey, useSSL, minioPublicURL)
 		log.Printf("Using MinIO storage: %s/%s", minioEndpoint, minioBucket)

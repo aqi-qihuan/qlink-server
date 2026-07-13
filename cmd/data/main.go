@@ -29,10 +29,10 @@ func main() {
 	}
 
 	port := getEnv("PORT", "8002")
-	chAddr := getEnv("CLICKHOUSE_ADDR", "192.168.192.21:8123")
-	chUser := getEnv("CLICKHOUSE_USER", "default")
-	chPwd := getEnv("CLICKHOUSE_PWD", "aqi1015!")
-	chDB := getEnv("CLICKHOUSE_DB", "default")
+	chAddr := getEnv("CLICKHOUSE_ADDR", "localhost:8123")
+	chUser := getEnv("CLICKHOUSE_USER", "qlink")
+	chPwd := getEnv("CLICKHOUSE_PWD", "")
+	chDB := getEnv("CLICKHOUSE_DB", "qlink_analytics")
 
 	// ClickHouse native API with HTTP protocol (port 8123) ??native protocol on 9000 has handshake timeout with CH 26.x
 	log.Printf("Connecting to ClickHouse: %s/%s", chAddr, chDB)
@@ -60,9 +60,9 @@ func main() {
 	log.Println("ClickHouse connected")
 
 	// Redis
-	redisHost := getEnv("REDIS_HOST", "192.168.192.21")
+	redisHost := getEnv("REDIS_HOST", "localhost")
 	redisPort := getEnv("REDIS_PORT", "6379")
-	redisPwd := getEnv("REDIS_PWD", "aqi1015")
+	redisPwd := getEnv("REDIS_PWD", "")
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
 		Password: redisPwd,
