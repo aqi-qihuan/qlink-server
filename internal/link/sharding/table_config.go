@@ -10,9 +10,7 @@ var TableSuffixList = []string{"0", "a"}
 // Uses Java's String.hashCode() algorithm for compatibility.
 func GetRandomTableSuffix(code string) string {
 	h := util.JavaStringHashCode(code)
-	if h < 0 {
-		h = -h
-	}
-	idx := int(h) % len(TableSuffixList)
+	// Use unsigned conversion to avoid negative index from int32 overflow.
+	idx := int(uint32(h)) % len(TableSuffixList)
 	return TableSuffixList[idx]
 }

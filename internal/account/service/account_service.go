@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -41,8 +42,14 @@ func (s *AccountService) Register(req *request.AccountRegisterRequest) error {
 
 	// Check if phone already registered
 	var existing accountmodel.AccountDO
-	if err := s.db.Where("phone = ?", req.Phone).First(&existing).Error; err == nil {
+	err := s.db.Where("phone = ?", req.Phone).First(&existing).Error
+	if err == nil {
 		return fmt.Errorf("phone number already registered")
+	}
+	// Distinguish "not found" (expected) from DB connection errors.
+	// Without this, a DB outage during registration could create duplicate accounts.
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("check phone failed: %w", err)
 	}
 
 	// Generate account number
@@ -50,7 +57,10 @@ func (s *AccountService) Register(req *request.AccountRegisterRequest) error {
 
 	// Generate password salt and hash
 	salt := "$1$" + util.GetStringNumRandom(8)
-	pwdHash := md5CryptHash(req.Pwd, salt)
+	pwdHash, err := md5CryptHash(req.Pwd, salt)
+	if err != nil {
+		return fmt.Errorf("hash password failed: %w", err)
+	}
 
 	account := accountmodel.AccountDO{
 		AccountNo: accountNo,
@@ -91,7 +101,10 @@ func (s *AccountService) Login(req *request.AccountLoginRequest) (string, error)
 	}
 
 	// Re-encrypt password with stored salt and compare
-	pwdHash := md5CryptHash(req.Pwd, account.Secret)
+	pwdHash, err := md5CryptHash(req.Pwd, account.Secret)
+	if err != nil {
+		return "", fmt.Errorf("hash password failed: %w", err)
+	}
 	if pwdHash != account.Pwd {
 		return "", fmt.Errorf("incorrect password")
 	}
@@ -183,12 +196,13 @@ func (s *AccountService) Update(accountNo int64, req *request.AccountUpdateReque
 
 // md5CryptHash encrypts a password with the given salt using MD5-crypt ($1$).
 // Compatible with Java's Md5Crypt.md5Crypt(password, salt).
-func md5CryptHash(password, salt string) string {
+// Returns an error if hashing fails — the caller MUST handle it, otherwise
+// an empty hash could allow "" == "" authentication bypass.
+func md5CryptHash(password, salt string) (string, error) {
 	c := crypt.New(crypt.MD5)
 	hash, err := c.Generate([]byte(password), []byte(salt))
 	if err != nil {
-		log.Printf("[ERROR] md5crypt failed: %v", err)
-		return ""
+		return "", fmt.Errorf("md5crypt failed: %w", err)
 	}
-	return hash
+	return hash, nil
 }

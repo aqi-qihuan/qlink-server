@@ -52,7 +52,10 @@ func (ctrl *ShortLinkController) Check(c *gin.Context) {
 	tableName := sharding.GetTableName("short_link", tableSuffix)
 
 	var count int64
-	ctrl.dbs[dbIdx].Table(tableName).Where("code = ? AND del = 0", code).Count(&count)
+	if err := ctrl.dbs[dbIdx].Table(tableName).Where("code = ? AND del = 0", code).Count(&count).Error; err != nil {
+		response.JSON(c, response.BuildError("query failed"))
+		return
+	}
 	response.JSON(c, response.BuildSuccessData(count > 0))
 }
 
@@ -191,17 +194,23 @@ func (ctrl *ShortLinkController) Page(c *gin.Context) {
 	tableName := sharding.GetTableName("group_code_mapping", fmt.Sprintf("%d", tableIdx))
 
 	var total int64
-	ctrl.dbs[dbIdx].Table(tableName).
+	if err := ctrl.dbs[dbIdx].Table(tableName).
 		Where("account_no = ? AND group_id = ? AND del = 0", loginUser.AccountNo, req.GroupID).
-		Count(&total)
+		Count(&total).Error; err != nil {
+		response.JSON(c, response.BuildError("query failed"))
+		return
+	}
 
 	var list []linkmodel.GroupCodeMappingDO
 	offset := (req.Page - 1) * req.Size
-	ctrl.dbs[dbIdx].Table(tableName).
+	if err := ctrl.dbs[dbIdx].Table(tableName).
 		Where("account_no = ? AND group_id = ? AND del = 0", loginUser.AccountNo, req.GroupID).
 		Order("gmt_create DESC").
 		Offset(offset).Limit(req.Size).
-		Find(&list)
+		Find(&list).Error; err != nil {
+		response.JSON(c, response.BuildError("query failed"))
+		return
+	}
 
 	response.JSON(c, response.BuildSuccessData(gin.H{
 		"page":  req.Page,
@@ -364,7 +373,10 @@ func (ctrl *ShortLinkController) Status(c *gin.Context) {
 	}
 	// Check if the row actually exists
 	var exists int
-	ctrl.dbs[dbIdx].Raw("SELECT 1 FROM "+tableName+" WHERE code = ? AND account_no = ? AND del = 0 LIMIT 1", req.Code, loginUser.AccountNo).Scan(&exists)
+	if err := ctrl.dbs[dbIdx].Raw("SELECT 1 FROM "+tableName+" WHERE code = ? AND account_no = ? AND del = 0 LIMIT 1", req.Code, loginUser.AccountNo).Scan(&exists).Error; err != nil {
+		response.JSON(c, response.BuildError("query failed"))
+		return
+	}
 	if exists == 0 {
 		response.JSON(c, response.BuildError("short link not found"))
 		return
@@ -403,9 +415,18 @@ func (ctrl *ShortLinkController) Summary(c *gin.Context) {
 			tableName := sharding.GetTableName("short_link", suffix)
 
 			var total, active, todayCreated int64
-			ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND del = 0", loginUser.AccountNo).Count(&total)
-			ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND state = 'ACTIVE' AND del = 0", loginUser.AccountNo).Count(&active)
-			ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND gmt_create >= ? AND del = 0", loginUser.AccountNo, today).Count(&todayCreated)
+			if err := ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND del = 0", loginUser.AccountNo).Count(&total).Error; err != nil {
+				response.JSON(c, response.BuildError("query failed"))
+				return
+			}
+			if err := ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND state = 'ACTIVE' AND del = 0", loginUser.AccountNo).Count(&active).Error; err != nil {
+				response.JSON(c, response.BuildError("query failed"))
+				return
+			}
+			if err := ctrl.dbs[dbIdx].Table(tableName).Where("account_no = ? AND gmt_create >= ? AND del = 0", loginUser.AccountNo, today).Count(&todayCreated).Error; err != nil {
+				response.JSON(c, response.BuildError("query failed"))
+				return
+			}
 
 			result.TotalLinks += total
 			result.ActiveLinks += active
@@ -422,7 +443,10 @@ func (ctrl *ShortLinkController) checkCodeExists(code string) bool {
 	dbIdx := sharding.GetDBIndexByPrefix(dbPrefix)
 	tableName := sharding.GetTableName("short_link", tableSuffix)
 	var count int64
-	ctrl.dbs[dbIdx].Table(tableName).Where("code = ?", code).Count(&count)
+	if err := ctrl.dbs[dbIdx].Table(tableName).Where("code = ?", code).Count(&count).Error; err != nil {
+		log.Printf("[DB] checkCodeExists error: %v", err)
+		return true // conservative: assume code exists to avoid collision
+	}
 	return count > 0
 }
 
@@ -433,12 +457,11 @@ func (ctrl *ShortLinkController) acquireCodeLock(ctx context.Context, code strin
 		return true
 	}
 	script := redis.NewScript(`
-		if redis.call('EXISTS',KEYS[1])==0 then
-			redis.call('set',KEYS[1],ARGV[1]);
-			redis.call('expire',KEYS[1],ARGV[2]);
-			return 1;
-		elseif redis.call('get',KEYS[1]) == ARGV[1] then
+		if redis.call('get',KEYS[1]) == ARGV[1] then
 			return 2;
+		end
+		if redis.call('SET',KEYS[1],ARGV[1],'NX','EX',ARGV[2]) then
+			return 1;
 		else
 			return 0;
 		end
@@ -459,9 +482,15 @@ func (ctrl *ShortLinkController) checkTrafficQuota(ctx context.Context, accountN
 		return true
 	}
 	script := redis.NewScript(`
-		if redis.call('get',KEYS[1]) then
-			return redis.call('decr',KEYS[1])
+		local val = redis.call('get', KEYS[1])
+		if val then
+			return redis.call('decr', KEYS[1])
 		else
+			-- Key doesn't exist (new user, new day, or cache expired).
+			-- Set a temporary value of 0 so the next request will be rejected
+			-- (-1) until the account service's Reduce method initializes the
+			-- real quota. Return 0 (>= 0) to allow this first request through.
+			redis.call('set', KEYS[1], 0, 'EX', 86400)
 			return 0
 		end
 	`)

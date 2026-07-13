@@ -3,6 +3,7 @@ package streamer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -64,7 +65,8 @@ func (j *DWMUVJob) Run(ctx context.Context) {
 		isUnique, err := j.checkUniqueVisitor(ctx, msg.Value)
 		if err != nil {
 			log.Printf("[DWM-UV] check error: %v", err)
-			j.reader.CommitMessages(ctx, msg)
+			// Do NOT commit on check failure (e.g. Redis down) — re-deliver.
+			time.Sleep(time.Second)
 			continue
 		}
 
@@ -72,6 +74,9 @@ func (j *DWMUVJob) Run(ctx context.Context) {
 			err = j.writer.WriteMessages(ctx, kafka.Message{Value: msg.Value})
 			if err != nil {
 				log.Printf("[DWM-UV] write error: %v", err)
+				// Do NOT commit on write failure — re-deliver.
+				time.Sleep(time.Second)
+				continue
 			}
 		}
 
@@ -107,8 +112,10 @@ func (j *DWMUVJob) checkUniqueVisitor(ctx context.Context, raw []byte) (bool, er
 	// SETNX: set if not exists, with 1-day TTL
 	set, err := j.rdb.SetNX(ctx, redisKey, currentDate, uvTTL).Result()
 	if err != nil {
-		log.Printf("[DWM-UV] Redis SETNX error: %v", err)
-		return true, nil
+		// Redis failure: return error so the message is re-delivered, NOT
+		// committed. Previously returned true (unique), causing UV counts
+		// to be severely inflated during Redis outages.
+		return false, fmt.Errorf("redis SETNX failed: %w", err)
 	}
 
 	if set {
@@ -118,8 +125,8 @@ func (j *DWMUVJob) checkUniqueVisitor(ctx context.Context, raw []byte) (bool, er
 
 	// Key already exists → check if same date
 	stored, err := j.rdb.Get(ctx, redisKey).Result()
-	if err != nil {
-		return true, nil
+	if err != nil && err != redis.Nil {
+		return false, fmt.Errorf("redis GET failed: %w", err)
 	}
 
 	if strings.EqualFold(stored, currentDate) {

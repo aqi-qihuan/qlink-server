@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 
@@ -16,6 +17,9 @@ func init() {
 			return getMachineID()
 		},
 	})
+	if sf == nil {
+		panic("sonyflake initialization failed: machine ID setup returned error")
+	}
 }
 
 func getMachineID() (uint16, error) {
@@ -48,13 +52,15 @@ func getLocalIP() string {
 
 // GenerateSnowflakeID returns a snowflake ID (int64).
 // Compatible with Java's ShardingSphere SnowflakeShardingKeyGenerator.
+// Panics on failure — returning 0 would cause primary key collisions and
+// account number cross-contamination, which is far worse than a request failure.
 func GenerateSnowflakeID() uint64 {
 	if sf == nil {
-		return 0
+		panic("sonyflake is not initialized: machine ID setup failed")
 	}
 	id, err := sf.NextID()
 	if err != nil {
-		return 0
+		panic(fmt.Sprintf("sonyflake NextID failed: %v", err))
 	}
 	return id
 }

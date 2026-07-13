@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aqi/qlink-server/internal/common/util"
@@ -35,7 +37,11 @@ type PayInfoVO struct {
 }
 
 // PayFactory resolves the correct PayStrategy by pay type.
+// Uses RWMutex to protect the strategies map from concurrent read/write
+// (fatal error: concurrent map read and map write) if Register is called
+// at runtime.
 type PayFactory struct {
+	mu         sync.RWMutex
 	strategies map[string]PayStrategy
 }
 
@@ -44,10 +50,14 @@ func NewPayFactory() *PayFactory {
 }
 
 func (f *PayFactory) Register(payType string, strategy PayStrategy) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.strategies[payType] = strategy
 }
 
 func (f *PayFactory) GetStrategy(payType string) (PayStrategy, bool) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 	s, ok := f.strategies[payType]
 	return s, ok
 }
@@ -271,12 +281,14 @@ type wechatV2Request struct {
 
 // wechatV2Response is the XML response from WeChat Pay V2.
 type wechatV2Response struct {
-	ReturnCode string `xml:"return_code"`
-	ReturnMsg  string `xml:"return_msg"`
-	ResultCode string `xml:"result_code"`
-	PrepayID   string `xml:"prepay_id"`
-	CodeURL    string `xml:"code_url"`
-	Sign       string `xml:"sign"`
+	ReturnCode     string `xml:"return_code"`
+	ReturnMsg      string `xml:"return_msg"`
+	ResultCode     string `xml:"result_code"`
+	PrepayID       string `xml:"prepay_id"`
+	CodeURL        string `xml:"code_url"`
+	Sign           string `xml:"sign"`
+	TradeState     string `xml:"trade_state"`
+	TradeStateDesc string `xml:"trade_state_desc"`
 }
 
 func (s *WechatPayStrategy) UnifiedOrder(payInfo *PayInfoVO) (string, error) {
@@ -285,7 +297,7 @@ func (s *WechatPayStrategy) UnifiedOrder(payInfo *PayInfoVO) (string, error) {
 		return fmt.Sprintf("weixin://wxpay/bizpayurl?mock=1&out_trade_no=%s", payInfo.OutTradeNo), nil
 	}
 
-	totalFee := int(payInfo.PayFee * 100) // yuan -> fen
+	totalFee := int(math.Round(payInfo.PayFee * 100)) // yuan -> fen (rounded to avoid float truncation)
 
 	params := map[string]string{
 		"appid":            s.cfg.WechatAppID,
@@ -340,37 +352,13 @@ func (s *WechatPayStrategy) QueryPayStatus(payInfo *PayInfoVO) (string, error) {
 		return "", fmt.Errorf("wechat orderquery: %s", resp.ReturnMsg)
 	}
 
-	// Parse trade_state from XML response
-	var fullResp struct {
-		ReturnCode  string `xml:"return_code"`
-		ResultCode  string `xml:"result_code"`
-		TradeState  string `xml:"trade_state"`
-		TradeStateDesc string `xml:"trade_state_desc"`
-	}
-	// Re-read response to get trade_state
-	params2 := map[string]string{
-		"appid":        s.cfg.WechatAppID,
-		"mch_id":       s.cfg.WechatMchID,
-		"out_trade_no": payInfo.OutTradeNo,
-		"nonce_str":    util.GetStringNumRandom(32),
-		"sign_type":    "MD5",
-	}
-	params2["sign"] = signWechatV2(params2, s.cfg.WechatAPIKey)
-	xmlBody := buildXMLRequest(params2)
-	httpResp, err := s.client.Post(s.sandboxURL("/pay/orderquery"), "application/xml", strings.NewReader(xmlBody))
-	if err != nil {
-		return "", err
-	}
-	defer httpResp.Body.Close()
-	body, _ := io.ReadAll(httpResp.Body)
-	if err := xml.Unmarshal(body, &fullResp); err != nil {
-		return "", err
-	}
-
-	if fullResp.TradeState == "SUCCESS" {
+	// TradeState is now part of wechatV2Response — no need for a second API call.
+	// Previously the struct lacked TradeState, causing a duplicate request that
+	// doubled API usage and risked status inconsistency between the two calls.
+	if resp.TradeState == "SUCCESS" {
 		return "SUCCESS", nil
 	}
-	return fullResp.TradeState, nil
+	return resp.TradeState, nil
 }
 
 func (s *WechatPayStrategy) CloseOrder(payInfo *PayInfoVO) (string, error) {
@@ -402,7 +390,7 @@ func (s *WechatPayStrategy) Refund(payInfo *PayInfoVO) (string, error) {
 		return "SUCCESS", nil
 	}
 
-	totalFee := int(payInfo.PayFee * 100)
+	totalFee := int(math.Round(payInfo.PayFee * 100)) // yuan -> fen (rounded to avoid float truncation)
 	params := map[string]string{
 		"appid":         s.cfg.WechatAppID,
 		"mch_id":        s.cfg.WechatMchID,
@@ -457,11 +445,15 @@ func (s *WechatPayStrategy) sandboxURL(path string) string {
 }
 
 // buildXMLRequest builds an XML request body from params.
+// Values are XML-escaped to prevent malformed XML when params contain
+// characters like <, >, & (e.g. product titles with special symbols).
 func buildXMLRequest(params map[string]string) string {
 	var b strings.Builder
 	b.WriteString("<xml>")
 	for k, v := range params {
-		b.WriteString("<" + k + ">" + v + "</" + k + ">")
+		b.WriteString("<" + k + ">")
+		xml.EscapeText(&b, []byte(v))
+		b.WriteString("</" + k + ">")
 	}
 	b.WriteString("</xml>")
 	return b.String()

@@ -42,6 +42,7 @@ func (ctrl *BatchController) Delete(c *gin.Context) {
 	}
 
 	// Batch delete via MQ (async) for audit trail and reliability
+	deleted := 0
 	for _, id := range req.IDs {
 		eventMsg := model.EventMessage{
 			MessageId:        util.GenerateUUID(),
@@ -58,18 +59,25 @@ func (ctrl *BatchController) Delete(c *gin.Context) {
 			}
 		}
 
-		// Also sync delete from group_code_mapping
+		// Also sync delete from group_code_mapping. Track actual success count
+		// instead of assuming all deletions succeed — previously returned
+		// "deleted: N" even when every DB update failed.
 		dbIdx, tableIdx := sharding.RouteGroupCodeMapping(loginUser.AccountNo, req.GroupID)
 		tableName := sharding.GetTableName("group_code_mapping", fmt.Sprintf("%d", tableIdx))
-		ctrl.dbs[dbIdx].Table(tableName).
+		result := ctrl.dbs[dbIdx].Table(tableName).
 			Where("id = ? AND account_no = ? AND group_id = ?", id, loginUser.AccountNo, req.GroupID).
 			Update("del", 1)
+		if result.Error != nil {
+			log.Printf("[BatchDelete] delete id=%d failed: %v", id, result.Error)
+		} else {
+			deleted += int(result.RowsAffected)
+		}
 	}
 
 	ctrl.opLog.Record(loginUser.AccountNo, "link:batch_delete", "short_link", "", c.ClientIP(), c.GetHeader("User-Agent"),
-		map[string]interface{}{"count": len(req.IDs), "ids": req.IDs})
+		map[string]interface{}{"count": deleted, "ids": req.IDs})
 
-	response.JSON(c, response.BuildSuccessData(gin.H{"deleted": len(req.IDs)}))
+	response.JSON(c, response.BuildSuccessData(gin.H{"deleted": deleted}))
 }
 
 // Status handles POST /api/link/v1/batch_status.

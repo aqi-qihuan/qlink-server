@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/aqi/qlink-server/internal/link/model"
@@ -49,10 +50,14 @@ func (s *OperationLogService) Page(accountNo int64, action, resourceID string, s
 	}
 
 	var total int64
-	q.Count(&total)
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("query count failed: %w", err)
+	}
 
 	var list []model.OperationLogDO
 	offset := (page - 1) * size
-	q.Order("gmt_create DESC").Offset(offset).Limit(size).Find(&list)
+	if err := q.Order("gmt_create DESC").Offset(offset).Limit(size).Find(&list).Error; err != nil {
+		return nil, 0, fmt.Errorf("query logs failed: %w", err)
+	}
 	return list, total, nil
 }

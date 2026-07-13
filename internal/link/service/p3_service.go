@@ -94,7 +94,10 @@ func (c *URLSafeChecker) Check(rawURL string) *vo.URLSafeCheckVO {
 }
 
 func (c *URLSafeChecker) doHEAD(rawURL string) (*http.Response, error) {
-	req, _ := http.NewRequest("HEAD", rawURL, nil)
+	req, err := http.NewRequest("HEAD", rawURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL: %w", err)
+	}
 	req.Header.Set("User-Agent", "qlink-safety-checker/1.0")
 	return c.client.Do(req)
 }

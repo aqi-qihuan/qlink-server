@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -66,10 +67,19 @@ func (p *Pipeline) Start() {
 
 	for _, job := range jobs {
 		p.wg.Add(1)
-		go func(name string, run func(ctx context.Context)) {
+		go func(name string, run func(ctx context.Context), stop func()) {
 			defer p.wg.Done()
+			// Ensure Kafka reader/writer connections are released when the
+			// goroutine exits. Previously stop() was never called, leaking
+			// connections on every pipeline shutdown.
+			defer func() {
+				if stop != nil {
+					stop()
+				}
+			}()
+			log.Printf("[Pipeline] %s stage starting", name)
 			run(ctx)
-		}(job.name, job.run)
+		}(job.name, job.run, job.stop)
 	}
 
 	log.Printf("[Pipeline] %d stages started", len(jobs))
@@ -84,20 +94,26 @@ func (p *Pipeline) Stop() {
 	log.Println("[Pipeline] All stages stopped")
 }
 
-// timezone for date formatting
-var tz = time.UTC
+// timezone for date formatting — uses atomic.Pointer for safe concurrent
+// read/write (SetTimezone writes, FormatDate/FormatDateTime read from
+// multiple streamer goroutines).
+var tz atomic.Pointer[time.Location]
+
+func init() {
+	tz.Store(time.UTC)
+}
 
 func SetTimezone(loc *time.Location) {
-	tz = loc
+	tz.Store(loc)
 }
 
 // FormatDate formats epoch milliseconds to "yyyy-MM-dd".
 func FormatDate(tsMillis int64) string {
-	t := time.UnixMilli(tsMillis).In(tz)
+	t := time.UnixMilli(tsMillis).In(tz.Load())
 	return t.Format("2006-01-02")
 }
 
 // FormatDateTime formats time.Time to "yyyy-MM-dd HH:mm:ss".
 func FormatDateTime(t time.Time) string {
-	return t.In(tz).Format("2006-01-02 15:04:05")
+	return t.In(tz.Load()).Format("2006-01-02 15:04:05")
 }

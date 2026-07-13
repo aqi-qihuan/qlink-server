@@ -22,10 +22,16 @@ import (
 
 var sf = sonyflake.NewSonyflake(sonyflake.Settings{})
 
+func init() {
+	if sf == nil {
+		panic("oauth sonyflake initialization failed")
+	}
+}
+
 func nextID() int64 {
 	id, err := sf.NextID()
 	if err != nil {
-		return time.Now().UnixNano()/1e6 + int64(9000000000000000000)
+		panic(fmt.Sprintf("oauth sonyflake NextID failed: %v", err))
 	}
 	return int64(id)
 }
@@ -58,7 +64,10 @@ func (s *OAuthService) FetchUserInfo(tokenSource oauth2.TokenSource, userInfoURL
 		return nil, fmt.Errorf("get token: %w", err)
 	}
 
-	req, _ := http.NewRequest("GET", userInfoURL, nil)
+	req, err := http.NewRequest("GET", userInfoURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
 	// GitHub needs User-Agent
 	req.Header.Set("User-Agent", "qlink-server")

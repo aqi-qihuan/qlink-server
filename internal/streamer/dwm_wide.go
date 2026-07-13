@@ -88,6 +88,9 @@ func (j *DWMWideJob) Run(ctx context.Context) {
 		err = j.writer.WriteMessages(ctx, kafka.Message{Value: result})
 		if err != nil {
 			log.Printf("[DWM-Wide] write error: %v", err)
+			// Do NOT commit on write failure — let the message be re-delivered.
+			time.Sleep(time.Second)
+			continue
 		}
 
 		j.reader.CommitMessages(ctx, msg)

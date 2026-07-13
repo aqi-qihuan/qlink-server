@@ -29,7 +29,10 @@ func (ctrl *DomainController) List(c *gin.Context) {
 		return
 	}
 	var domains []model.DomainDO
-	ctrl.db.Where("del = 0").Find(&domains)
+	if err := ctrl.db.Where("del = 0").Find(&domains).Error; err != nil {
+		response.JSON(c, response.BuildError("query failed"))
+		return
+	}
 	list := make([]vo.DomainVO, len(domains))
 	for i, d := range domains {
 		list[i] = vo.DomainVO{

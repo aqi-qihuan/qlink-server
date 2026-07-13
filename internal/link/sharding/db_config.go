@@ -13,10 +13,9 @@ var DBDatasourceNames = []string{"aqicloud_link_0", "aqicloud_link_1", "aqicloud
 // Uses Java's String.hashCode() algorithm for compatibility.
 func GetRandomDBPrefix(code string) string {
 	h := util.JavaStringHashCode(code)
-	if h < 0 {
-		h = -h
-	}
-	idx := int(h) % len(DBPrefixList)
+	// Use unsigned conversion to avoid negative index from int32 overflow.
+	// When h == math.MinInt32, -h overflows and stays negative; uint32 avoids this.
+	idx := int(uint32(h)) % len(DBPrefixList)
 	return DBPrefixList[idx]
 }
 

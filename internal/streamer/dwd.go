@@ -74,6 +74,11 @@ func (j *DWDJob) Run(ctx context.Context) {
 		err = j.writer.WriteMessages(ctx, kafka.Message{Value: []byte(result)})
 		if err != nil {
 			log.Printf("[DWD] write error: %v", err)
+			// Do NOT commit on write failure — let the message be re-delivered
+			// so visit logs are not permanently lost. Previously, committing
+			// here caused data loss whenever Kafka writes failed.
+			time.Sleep(time.Second)
+			continue
 		}
 
 		j.reader.CommitMessages(ctx, msg)

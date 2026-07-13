@@ -2,6 +2,7 @@
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -96,12 +97,20 @@ func (ctrl *LinkApiController) Dispatch(c *gin.Context) {
 		Where("code = ? AND del = 0", code).
 		First(&shortLink).Error
 	if err != nil {
-		// 缓存空结??(防缓存穿??，短 TTL
-		if ctrl.rdb != nil {
-			ctrl.rdb.HSet(c, cacheKey, "url", "", "del", "1", "state", "")
-			ctrl.rdb.Expire(c, cacheKey, 1*time.Minute)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Cache negative result (cache penetration protection) ONLY for
+			// genuine "not found" — NOT for DB connection failures, which
+			// would otherwise cause all requests to return 404 for 1 minute
+			// even after the DB recovers.
+			if ctrl.rdb != nil {
+				ctrl.rdb.HSet(c, cacheKey, "url", "", "del", "1", "state", "")
+				ctrl.rdb.Expire(c, cacheKey, 1*time.Minute)
+			}
+			c.String(http.StatusNotFound, "short link not found")
+			return
 		}
-		c.String(http.StatusNotFound, "short link not found")
+		// DB error: do NOT cache, return 500
+		c.String(http.StatusInternalServerError, "internal error")
 		return
 	}
 
@@ -156,20 +165,26 @@ func (ctrl *LinkApiController) sendVisitLog(c *gin.Context, code string, account
 	if ctrl.kafka == nil {
 		return
 	}
+	// Extract all needed fields from gin.Context BEFORE starting the goroutine.
+	// gin.Context is recycled via sync.Pool after the handler returns, so the
+	// goroutine must NOT reference c. Use context.Background() instead.
 	ip := c.ClientIP()
+	userAgent := c.GetHeader("User-Agent")
+	referer := c.GetHeader("Referer")
 	logRecord := model.LogRecord{
 		IP:    ip,
 		Ts:    util.GetCurrentTimestamp(),
 		Event: "SHORT_LINK_TYPE",
 		BizId: code,
 		Data: map[string]interface{}{
-			"user-agent": c.GetHeader("User-Agent"),
-			"referer":    c.GetHeader("Referer"),
+			"user-agent": userAgent,
+			"referer":    referer,
 			"accountNo":  accountNo,
 		},
 	}
 	go func() {
-		if err := ctrl.kafka.PublishJSON(c, code, logRecord); err != nil {
+		ctx := context.Background()
+		if err := ctrl.kafka.PublishJSON(ctx, code, logRecord); err != nil {
 			log.Printf("[Kafka] publish visit log error: %v", err)
 		}
 	}()

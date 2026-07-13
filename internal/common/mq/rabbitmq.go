@@ -66,23 +66,59 @@ func (r *RabbitMQ) PublishJSON(exchange, routingKey string, body interface{}) er
 	})
 }
 
-// Consume starts consuming from a queue. The handler is called for each message.
+// Consume starts consuming from a queue with panic recovery and retry limits.
+// Handler panics are recovered to prevent goroutine crashes.
+// Failed messages are requeued until they exceed the max retry duration (5min),
+// then dropped to prevent infinite requeue loops.
+// On connection loss, the consumer logs a fatal error so the process restarts
+// (via container orchestrator), since in-process reconnect would need to
+// re-declare all exchanges/queues/bindings.
 func (r *RabbitMQ) Consume(queueName, consumerTag string, handler func([]byte) error) error {
 	msgs, err := r.channel.Consume(queueName, consumerTag, false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("consume failed: %w", err)
 	}
+
+	// Monitor connection close — log fatal so the container restarts.
 	go func() {
-		for msg := range msgs {
-			if err := handler(msg.Body); err != nil {
-				log.Printf("[RabbitMQ] consume error on %s: %v", queueName, err)
-				msg.Nack(false, true) // requeue
-			} else {
-				msg.Ack(false)
-			}
+		closeChan := r.conn.NotifyClose(make(chan *amqp.Error, 1))
+		if amqpErr, ok := <-closeChan; ok {
+			log.Fatalf("[RabbitMQ] connection lost on consumer %s: %v — process will restart", queueName, amqpErr)
 		}
 	}()
+
+	go func() {
+		for msg := range msgs {
+			r.handleMessage(msg, queueName, handler)
+		}
+		log.Printf("[RabbitMQ] consumer %s stopped (channel closed)", queueName)
+	}()
 	return nil
+}
+
+// handleMessage processes a single message with panic recovery and retry limits.
+func (r *RabbitMQ) handleMessage(msg amqp.Delivery, queueName string, handler func([]byte) error) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Printf("[RabbitMQ] handler panic on %s: %v", queueName, rec)
+			msg.Nack(false, false) // drop poison message
+		}
+	}()
+
+	if err := handler(msg.Body); err != nil {
+		// Limit retry duration: if the message is older than 5 minutes, drop it
+		// to prevent infinite requeue loops. Without a DLX, this is the simplest
+		// way to avoid poison messages consuming CPU and log space forever.
+		if !msg.Timestamp.IsZero() && time.Since(msg.Timestamp) > 5*time.Minute {
+			log.Printf("[RabbitMQ] message on %s older than 5min, dropping: %v", queueName, err)
+			msg.Nack(false, false)
+		} else {
+			log.Printf("[RabbitMQ] consume error on %s: %v", queueName, err)
+			msg.Nack(false, true) // requeue for retry
+		}
+	} else {
+		msg.Ack(false)
+	}
 }
 
 // Close closes the channel and connection.

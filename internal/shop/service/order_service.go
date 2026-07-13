@@ -156,11 +156,15 @@ func (s *OrderService) Page(accountNo int64, req *request.ProductOrderPageReques
 	}
 
 	var total int64
-	query.Count(&total)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("query count failed: %w", err)
+	}
 
 	var orders []shopdb.ProductOrderDO
 	offset := (req.Page - 1) * req.Size
-	query.Order("gmt_create DESC").Offset(offset).Limit(req.Size).Find(&orders)
+	if err := query.Order("gmt_create DESC").Offset(offset).Limit(req.Size).Find(&orders).Error; err != nil {
+		return nil, fmt.Errorf("query orders failed: %w", err)
+	}
 
 	totalPage := int(math.Ceil(float64(total) / float64(req.Size)))
 

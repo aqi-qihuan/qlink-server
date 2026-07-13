@@ -80,7 +80,21 @@ func (s *TrafficService) Reduce(req *request.UseTrafficRequest) error {
 		for i, p := range unupdated {
 			ids[i] = p.ID
 		}
-		db.Table(tableName).Where("id IN ?", ids).Update("day_used", 0)
+		if err := db.Table(tableName).Where("id IN ?", ids).Update("day_used", 0).Error; err != nil {
+			return fmt.Errorf("reset day_used failed: %w", err)
+		}
+		// Sync in-memory packs: day_used has been reset to 0 in DB.
+		// Without this, the remaining quota calculation below would use
+		// stale DayUsed values (yesterday's accumulated usage), causing
+		// the user's available quota to be undercounted.
+		for i := range packs {
+			for _, u := range unupdated {
+				if packs[i].ID == u.ID {
+					packs[i].DayUsed = 0
+					break
+				}
+			}
+		}
 	}
 
 	// 4. Calculate total remaining across all packs
@@ -347,15 +361,23 @@ func (s *TrafficService) handleTrafficUsed(eventMsg *model.EventMessage) error {
 		return result.Error
 	}
 
-	// Update task state to CANCEL
+	// Update task state to CANCEL. If this fails, the task remains LOCK and
+	// the next delayed message will roll back day_used again, causing
+	// traffic to be returned multiple times.
 	db := s.dbs[dbIdx]
-	db.Table("traffic_task").
+	if err := db.Table("traffic_task").
 		Where("id = ?", task.ID).
-		Update("lock_state", string(enums.TASK_CANCEL))
+		Update("lock_state", string(enums.TASK_CANCEL)).Error; err != nil {
+		log.Printf("[MQ] update traffic task state failed: %v", err)
+		return err
+	}
 
-	// Update Redis cache
+	// Update Redis cache. Non-fatal: DB is already correct, cache will
+	// refresh on next Reduce if this fails.
 	remainKey := constant.FormatDayTotalTrafficKey(accountNo)
-	s.rdb.Incr(context.Background(), remainKey)
+	if err := s.rdb.Incr(context.Background(), remainKey).Err(); err != nil {
+		log.Printf("[MQ] restore Redis traffic cache failed: %v", err)
+	}
 
 	log.Printf("[MQ] rolled back traffic for task %s, account %d, rows=%d", eventMsg.BizId, accountNo, result.RowsAffected)
 	return nil
@@ -429,7 +451,13 @@ func (s *TrafficService) fetchProduct(productID int64) (*productInfo, error) {
 	}
 
 	url := fmt.Sprintf("%s/api/product/v1/detail/%d", s.shopServiceURL, productID)
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

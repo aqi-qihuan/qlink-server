@@ -117,8 +117,11 @@ func (ctrl *AccountController) Upload(c *gin.Context) {
 		return
 	}
 
-	// Read file content for hashing
-	data, err := io.ReadAll(file)
+	// Read file content with size limit to prevent DoS.
+	// Previously used io.ReadAll which would read the entire file into memory
+	// before checking the size, allowing a malicious large file to exhaust memory.
+	limitedReader := io.LimitReader(file, 5*1024*1024+1)
+	data, err := io.ReadAll(limitedReader)
 	if err != nil {
 		response.JSON(c, response.BuildError("read file failed"))
 		return

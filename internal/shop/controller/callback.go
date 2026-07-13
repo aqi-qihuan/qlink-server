@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/aqi/qlink-server/internal/common/enums"
 	"github.com/aqi/qlink-server/internal/common/model"
@@ -115,9 +116,11 @@ func (ctrl *CallbackController) AlipayCallback(c *gin.Context) {
 
 // processOrderCallbackMsg sends a PRODUCT_ORDER_PAY event to MQ.
 func (ctrl *CallbackController) processOrderCallbackMsg(outTradeNo string) {
-	// Idempotency guard via Redis setIfAbsent
+	// Idempotency guard via Redis setIfAbsent.
+	// TTL=7 days: previously used 0 (never expire), causing unbounded Redis
+	// memory growth as every order callback created a permanent key.
 	key := "pay:callback:" + outTradeNo
-	set, err := ctrl.rdb.SetNX(context.Background(), key, "1", 0).Result()
+	set, err := ctrl.rdb.SetNX(context.Background(), key, "1", 7*24*time.Hour).Result()
 	if err != nil || !set {
 		log.Printf("[Callback] duplicate callback for order: %s", outTradeNo)
 		return

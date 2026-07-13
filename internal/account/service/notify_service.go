@@ -65,6 +65,15 @@ func (s *NotifyService) SendCode(sendCodeType, to string) error {
 	code := util.GetRandomCode(6)
 	value := fmt.Sprintf("%s_%d", code, time.Now().UnixMilli())
 
+	// Send SMS first, then store code in Redis. Previously stored first,
+	// so if SMS failed the code occupied Redis (rate-limiting the user
+	// for 60s) while the user never received it.
+	templateCode := "SMS_REGISTER_CODE"
+	params := map[string]string{"code": code}
+	if err := s.smsProv.Send(to, templateCode, params); err != nil {
+		return fmt.Errorf("send SMS failed: %w", err)
+	}
+
 	pipe := s.rdb.Pipeline()
 	pipe.Set(context.Background(), redisKey, value, CodeTTL)
 	pipe.Set(context.Background(), redisKey+":ts", time.Now().UnixMilli(), CodeTTL)
@@ -72,20 +81,16 @@ func (s *NotifyService) SendCode(sendCodeType, to string) error {
 	if err != nil {
 		return fmt.Errorf("save code to redis failed: %w", err)
 	}
-
-	// Send SMS via provider
-	templateCode := "SMS_REGISTER_CODE"
-	params := map[string]string{"code": code}
-	if err := s.smsProv.Send(to, templateCode, params); err != nil {
-		return fmt.Errorf("send SMS failed: %w", err)
-	}
 	return nil
 }
 
 // CheckCode validates the SMS verification code.
+// Uses GetDel for atomic get-and-delete, preventing code reuse if a
+// plain Del were to fail (e.g. Redis network glitch) and leave the code
+// available for repeated submission.
 func (s *NotifyService) CheckCode(sendCodeType, phone, code string) bool {
 	redisKey := constant.FormatCheckCodeKey(sendCodeType, phone)
-	val, err := s.rdb.Get(context.Background(), redisKey).Result()
+	val, err := s.rdb.GetDel(context.Background(), redisKey).Result()
 	if err != nil {
 		return false
 	}
@@ -94,9 +99,5 @@ func (s *NotifyService) CheckCode(sendCodeType, phone, code string) bool {
 		return false
 	}
 	storedCode := val[:6]
-	if storedCode != code {
-		return false
-	}
-	s.rdb.Del(context.Background(), redisKey)
-	return true
+	return storedCode == code
 }

@@ -71,7 +71,12 @@ func (j *DWSJob) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			j.flush(ctx, &mu, &window)
+			// Use a fresh context with timeout for the final flush, because
+			// ctx is already cancelled and ClickHouse PrepareBatch would
+			// immediately return context.Canceled, losing the last window's data.
+			flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			j.flush(flushCtx, &mu, &window)
+			flushCancel()
 			log.Println("[DWS] Stopped")
 			return
 		case <-ticker.C:
@@ -162,6 +167,18 @@ func (j *DWSJob) flush(ctx context.Context, mu *sync.Mutex, window *map[StatsKey
 
 	if err := j.batchInsert(ctx, records); err != nil {
 		log.Printf("[DWS] ClickHouse insert error (%d records): %v", len(records), err)
+		// Re-merge failed batch back into window for next flush retry.
+		// Previously these records were permanently lost on insert failure.
+		mu.Lock()
+		for key, stats := range batch {
+			if existing, ok := (*window)[key]; ok {
+				existing.PV += stats.PV
+				existing.UV += stats.UV
+			} else {
+				(*window)[key] = stats
+			}
+		}
+		mu.Unlock()
 	} else {
 		log.Printf("[DWS] Flushed %d records to ClickHouse", len(records))
 	}
