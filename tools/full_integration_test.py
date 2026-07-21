@@ -3,6 +3,10 @@
 覆盖：M01→M02→M03→M04→M05→M07→M09→M10→M11→M12→M14
 """
 import urllib.request, urllib.error, json, http.client, redis, sys, os
+from dotenv import load_dotenv
+
+# 自动加载 .env（gitignored，含真实凭据）
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 GATEWAY = os.environ.get("GATEWAY", "http://localhost:8888")
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")

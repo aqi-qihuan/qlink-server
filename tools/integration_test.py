@@ -9,8 +9,12 @@ import hashlib
 import time
 import redis
 import os
+from dotenv import load_dotenv
 
-# ---- 配置（从环境变量读取，不硬编码敏感信息）----
+# 自动加载 .env（gitignored，含真实凭据）
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
+# ---- 配置（从 .env / 环境变量读取，不硬编码敏感信息）----
 ACCOUNT_URL = os.environ.get("ACCOUNT_URL", "http://localhost:8001")
 LINK_URL    = os.environ.get("LINK_URL", "http://localhost:8003")
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://localhost:8888")
