@@ -16,8 +16,8 @@ type AbuseReportPageRequest struct {
 
 // AbuseReportResolveRequest resolves/dismisses a report.
 type AbuseReportResolveRequest struct {
-	ID    int64  `json:"id" binding:"required"`
-	Note  string `json:"note"`
+	ID     int64  `json:"id" binding:"required"`
+	Note   string `json:"note"`
 	Status string `json:"status" binding:"required"` // RESOLVED / DISMISSED
 }
 

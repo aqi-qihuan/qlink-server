@@ -1,4 +1,4 @@
-﻿package service
+package service
 
 import (
 	"context"
@@ -32,7 +32,7 @@ type TrafficService struct {
 	dbs            []*gorm.DB // 2 datasources: traffic_0, traffic_1
 	rdb            *redis.Client
 	rmq            *mq.RabbitMQ
-	shopServiceURL string // e.g. "http://localhost:8005"
+	shopServiceURL string   // e.g. "http://localhost:8005"
 	accountDB      *gorm.DB // aqicloud_account DB for auth upgrade
 }
 

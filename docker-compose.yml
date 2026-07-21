@@ -7,7 +7,7 @@ services:
     image: mysql:8.4.8
     container_name: qlink-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
     ports:
       - "3306:3306"
     volumes:
@@ -15,7 +15,7 @@ services:
       - ./sql:/docker-entrypoint-initdb.d
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -38,8 +38,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -77,8 +77,8 @@ services:
       - "9010:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -119,17 +119,17 @@ services:
       PORT: "8001"
       MYSQL_HOST: "mysql"
       MYSQL_PORT: "3306"
-      MYSQL_USER: "root"
-      MYSQL_PWD: "root"
+      MYSQL_USER: "${MYSQL_USER:-root}"
+      MYSQL_PWD: "${MYSQL_PWD:-root}"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
-      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_URL: "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672/"
       STORAGE_TYPE: "minio"
       MINIO_ENDPOINT: "minio:9000"
       MINIO_BUCKET: "aqicloud"
-      MINIO_ACCESS_KEY: "minioadmin"
-      MINIO_SECRET_KEY: "minioadmin"
-      MINIO_PUBLIC_URL: "http://192.168.192.21:9010/aqicloud"
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin}"
+      MINIO_PUBLIC_URL: "${MINIO_PUBLIC_URL:-http://localhost:9010/aqicloud}"
       SMS_PROVIDER: "log"
       SHOP_SERVICE: "http://shop:8005"
     depends_on:
@@ -154,11 +154,11 @@ services:
       PORT: "8003"
       MYSQL_HOST: "mysql"
       MYSQL_PORT: "3306"
-      MYSQL_USER: "root"
-      MYSQL_PWD: "root"
+      MYSQL_USER: "${MYSQL_USER:-root}"
+      MYSQL_PWD: "${MYSQL_PWD:-root}"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
-      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_URL: "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672/"
       KAFKA_BROKERS: "kafka:9092"
       ACCOUNT_SERVICE: "http://account:8001"
       RPC_TOKEN: "rpc-token-default"
@@ -199,11 +199,11 @@ services:
       PORT: "8005"
       MYSQL_HOST: "mysql"
       MYSQL_PORT: "3306"
-      MYSQL_USER: "root"
-      MYSQL_PWD: "root"
+      MYSQL_USER: "${MYSQL_USER:-root}"
+      MYSQL_PWD: "${MYSQL_PWD:-root}"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
-      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_URL: "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672/"
       # Alipay sandbox (leave empty for mock mode)
       ALI_APP_ID: "${ALI_APP_ID:-}"
       ALI_PRIVATE_KEY: "${ALI_PRIVATE_KEY:-}"

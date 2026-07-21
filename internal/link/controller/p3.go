@@ -94,8 +94,12 @@ func (ctrl *AbuseReportController) List(c *gin.Context) {
 		response.JSON(c, response.BuildError("invalid request body"))
 		return
 	}
-	if req.Page <= 0 { req.Page = 1 }
-	if req.Size <= 0 { req.Size = 20 }
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
 
 	q := ctrl.db.Model(&model.AbuseReportDO{}).Where("reporter_account_no = ?", loginUser.AccountNo)
 	if req.Status != "" {

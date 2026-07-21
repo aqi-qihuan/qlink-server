@@ -29,9 +29,9 @@ func (f *FlexInt) UnmarshalJSON(data []byte) error {
 
 // VisitRecordPageRequest is the body for POST /api/visit_stats/v1/page_record.
 type VisitRecordPageRequest struct {
-	Code  string  `json:"code"`
-	Page  FlexInt `json:"page"`
-	Size  FlexInt `json:"size"`
+	Code string  `json:"code"`
+	Page FlexInt `json:"page"`
+	Size FlexInt `json:"size"`
 }
 
 // RegionQueryRequest is the body for POST /api/visit_stats/v1/region_day.
@@ -44,7 +44,7 @@ type RegionQueryRequest struct {
 // VisitTrendQueryRequest is the body for POST /api/visit_stats/v1/trend.
 type VisitTrendQueryRequest struct {
 	Code      string `json:"code"`
-	Type      string `json:"type"`      // DAY, HOUR, MINUTE
+	Type      string `json:"type"` // DAY, HOUR, MINUTE
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
 }

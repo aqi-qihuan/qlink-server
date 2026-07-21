@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/GehirnInc/crypt"
@@ -199,6 +200,16 @@ func (s *AccountService) Update(accountNo int64, req *request.AccountUpdateReque
 // Returns an error if hashing fails — the caller MUST handle it, otherwise
 // an empty hash could allow "" == "" authentication bypass.
 func md5CryptHash(password, salt string) (string, error) {
+	// md5-crypt salt MUST be a valid "$1$<salt>$" token. An empty or
+	// non-prefixed salt makes the underlying crypt library auto-generate a
+	// random salt, producing a non-deterministic hash that can never verify
+	// at login (and historically returned "" → auth bypass). Reject it up front.
+	if !strings.HasPrefix(salt, "$1$") {
+		return "", fmt.Errorf("md5crypt: invalid salt %q (must start with $1$)", salt)
+	}
+	if body := strings.TrimSuffix(strings.TrimPrefix(salt, "$1$"), "$"); body == "" {
+		return "", fmt.Errorf("md5crypt: empty salt body in %q", salt)
+	}
 	c := crypt.New(crypt.MD5)
 	hash, err := c.Generate([]byte(password), []byte(salt))
 	if err != nil {

@@ -130,13 +130,13 @@ func drawDigit(img *image.RGBA, x, y int, ch byte, c color.RGBA) {
 	// Segment definitions: [x1, y1, x2, y2]
 	type seg struct{ x1, y1, x2, y2 int }
 	segCoords := []seg{
-		{x, y, x + w, y},                   // top
-		{x + w, y, x + w, y + h/2},         // top-right
-		{x + w, y + h/2, x + w, y + h},     // bottom-right
-		{x, y + h, x + w, y + h},           // bottom
-		{x, y + h/2, x, y + h},             // bottom-left
-		{x, y, x, y + h/2},                 // top-left
-		{x, y + h/2, x + w, y + h/2},       // middle
+		{x, y, x + w, y},               // top
+		{x + w, y, x + w, y + h/2},     // top-right
+		{x + w, y + h/2, x + w, y + h}, // bottom-right
+		{x, y + h, x + w, y + h},       // bottom
+		{x, y + h/2, x, y + h},         // bottom-left
+		{x, y, x, y + h/2},             // top-left
+		{x, y + h/2, x + w, y + h/2},   // middle
 	}
 
 	for i, on := range segs {

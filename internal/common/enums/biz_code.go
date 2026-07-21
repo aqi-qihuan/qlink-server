@@ -6,7 +6,7 @@ type BizCodeEnum struct {
 	message string
 }
 
-func (e BizCodeEnum) Code() int      { return e.code }
+func (e BizCodeEnum) Code() int       { return e.code }
 func (e BizCodeEnum) Message() string { return e.message }
 
 // Common
@@ -47,13 +47,13 @@ var (
 
 // Order
 var (
-	ORDER_PRICE_FAIL       = BizCodeEnum{280001, "价格不合法"}
-	ORDER_REPEAT_SUBMIT    = BizCodeEnum{280002, "请勿重复提交"}
-	ORDER_TOKEN_MISSING    = BizCodeEnum{280003, "token不存在，请重新获取"}
-	ORDER_NOT_EXIST        = BizCodeEnum{280004, "订单不存在"}
-	ORDER_STATE_ERROR      = BizCodeEnum{280005, "订单状态异常"}
-	ORDER_CANCEL_SUCCESS   = BizCodeEnum{280006, "订单取消成功"}
-	ORDER_CONFIRM_SUCCESS  = BizCodeEnum{280007, "订单确认成功"}
+	ORDER_PRICE_FAIL      = BizCodeEnum{280001, "价格不合法"}
+	ORDER_REPEAT_SUBMIT   = BizCodeEnum{280002, "请勿重复提交"}
+	ORDER_TOKEN_MISSING   = BizCodeEnum{280003, "token不存在，请重新获取"}
+	ORDER_NOT_EXIST       = BizCodeEnum{280004, "订单不存在"}
+	ORDER_STATE_ERROR     = BizCodeEnum{280005, "订单状态异常"}
+	ORDER_CANCEL_SUCCESS  = BizCodeEnum{280006, "订单取消成功"}
+	ORDER_CONFIRM_SUCCESS = BizCodeEnum{280007, "订单确认成功"}
 )
 
 // Payment
@@ -72,9 +72,9 @@ var (
 
 // Flow Control
 var (
-	CONTROL_FLOW  = BizCodeEnum{500101, "限流控制"}
+	CONTROL_FLOW    = BizCodeEnum{500101, "限流控制"}
 	CONTROL_DEGRADE = BizCodeEnum{500201, "降级控制"}
-	CONTROL_AUTH  = BizCodeEnum{500301, "认证控制"}
+	CONTROL_AUTH    = BizCodeEnum{500301, "认证控制"}
 )
 
 // Traffic

@@ -1,4 +1,4 @@
-﻿package component
+package component
 
 import (
 	"encoding/json"
@@ -86,11 +86,11 @@ func (s *AliPayStrategy) UnifiedOrder(payInfo *PayInfoVO) (string, error) {
 
 	// Build biz_content
 	bizContent := map[string]interface{}{
-		"out_trade_no":  payInfo.OutTradeNo,
-		"total_amount":  fmt.Sprintf("%.2f", payInfo.PayFee),
-		"subject":       payInfo.Title,
-		"body":          payInfo.Description,
-		"product_code":  "FAST_INSTANT_TRADE_PAY",
+		"out_trade_no":    payInfo.OutTradeNo,
+		"total_amount":    fmt.Sprintf("%.2f", payInfo.PayFee),
+		"subject":         payInfo.Title,
+		"body":            payInfo.Description,
+		"product_code":    "FAST_INSTANT_TRADE_PAY",
 		"timeout_express": fmt.Sprintf("%dm", payInfo.OrderPayTimeoutMills/60000),
 	}
 	bizJSON, _ := json.Marshal(bizContent)
@@ -205,9 +205,9 @@ func (s *AliPayStrategy) Refund(payInfo *PayInfoVO) (string, error) {
 	}
 
 	bizContent, _ := json.Marshal(map[string]interface{}{
-		"out_trade_no":   payInfo.OutTradeNo,
-		"refund_amount":  fmt.Sprintf("%.2f", payInfo.PayFee),
-		"refund_reason":  "用户申请退款",
+		"out_trade_no":  payInfo.OutTradeNo,
+		"refund_amount": fmt.Sprintf("%.2f", payInfo.PayFee),
+		"refund_reason": "用户申请退款",
 	})
 
 	params := map[string]string{

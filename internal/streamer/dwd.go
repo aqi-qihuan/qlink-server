@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	odsTopic    = "ods_link_visit_topic"
-	dwdTopic    = "dwd_link_visit_topic"
-	dwdGroupID  = "dwd_short_link_group"
+	odsTopic   = "ods_link_visit_topic"
+	dwdTopic   = "dwd_link_visit_topic"
+	dwdGroupID = "dwd_short_link_group"
 )
 
 // DWDJob reads from ODS, enriches events, writes to DWD.

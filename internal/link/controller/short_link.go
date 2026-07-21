@@ -1,4 +1,4 @@
-﻿package controller
+package controller
 
 import (
 	"context"
@@ -27,11 +27,11 @@ import (
 )
 
 type ShortLinkController struct {
-	dbs    []*gorm.DB // 3 datasources: ds0, ds1, dsa
-	rdb    *redis.Client
-	rmq    *mq.RabbitMQ
-	kafka  *mq.KafkaProducer
-	opLog  *service.OperationLogService
+	dbs   []*gorm.DB // 3 datasources: ds0, ds1, dsa
+	rdb   *redis.Client
+	rmq   *mq.RabbitMQ
+	kafka *mq.KafkaProducer
+	opLog *service.OperationLogService
 }
 
 func NewShortLinkController(dbs []*gorm.DB, rdb *redis.Client, rmq *mq.RabbitMQ, kafka *mq.KafkaProducer, opLog *service.OperationLogService) *ShortLinkController {
@@ -61,7 +61,7 @@ func (ctrl *ShortLinkController) Check(c *gin.Context) {
 
 // Add handles POST /api/link/v1/add.
 func (ctrl *ShortLinkController) Add(c *gin.Context) {
- loginUser := interceptor.GetLoginUser(c)
+	loginUser := interceptor.GetLoginUser(c)
 	if loginUser == nil {
 		response.JSON(c, response.BuildResult(enums.ACCOUNT_UNLOGIN))
 		return
@@ -134,10 +134,10 @@ func (ctrl *ShortLinkController) Add(c *gin.Context) {
 
 	// Publish MQ event for async DB writes
 	eventMsg := model.EventMessage{
-		MessageId:       util.GenerateUUID(),
+		MessageId:        util.GenerateUUID(),
 		EventMessageType: string(enums.SHORT_LINK_ADD),
-		BizId:           fmt.Sprintf("%d", util.GenerateSnowflakeID()),
-		AccountNo:       loginUser.AccountNo,
+		BizId:            fmt.Sprintf("%d", util.GenerateSnowflakeID()),
+		AccountNo:        loginUser.AccountNo,
 	}
 	content, _ := json.Marshal(map[string]interface{}{
 		"groupId":      req.GroupID,
@@ -187,8 +187,12 @@ func (ctrl *ShortLinkController) Page(c *gin.Context) {
 		response.JSON(c, response.BuildError("invalid request body"))
 		return
 	}
-	if req.Page <= 0 { req.Page = 1 }
-	if req.Size <= 0 { req.Size = 20 }
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
 
 	dbIdx, tableIdx := sharding.RouteGroupCodeMapping(loginUser.AccountNo, req.GroupID)
 	tableName := sharding.GetTableName("group_code_mapping", fmt.Sprintf("%d", tableIdx))
@@ -263,10 +267,10 @@ func (ctrl *ShortLinkController) Del(c *gin.Context) {
 
 	// Publish delete event
 	eventMsg := model.EventMessage{
-		MessageId:       util.GenerateUUID(),
+		MessageId:        util.GenerateUUID(),
 		EventMessageType: string(enums.SHORT_LINK_DEL),
-		BizId:           fmt.Sprintf("%d", util.GenerateSnowflakeID()),
-		AccountNo:       loginUser.AccountNo,
+		BizId:            fmt.Sprintf("%d", util.GenerateSnowflakeID()),
+		AccountNo:        loginUser.AccountNo,
 	}
 	content, _ := json.Marshal(map[string]interface{}{
 		"groupId":   req.GroupID,
@@ -305,10 +309,10 @@ func (ctrl *ShortLinkController) Update(c *gin.Context) {
 
 	// Publish update event
 	eventMsg := model.EventMessage{
-		MessageId:       util.GenerateUUID(),
+		MessageId:        util.GenerateUUID(),
 		EventMessageType: string(enums.SHORT_LINK_UPDATE),
-		BizId:           fmt.Sprintf("%d", util.GenerateSnowflakeID()),
-		AccountNo:       loginUser.AccountNo,
+		BizId:            fmt.Sprintf("%d", util.GenerateSnowflakeID()),
+		AccountNo:        loginUser.AccountNo,
 	}
 	content, _ := json.Marshal(map[string]interface{}{
 		"id":          req.ID,

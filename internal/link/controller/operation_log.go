@@ -32,12 +32,20 @@ func (ctrl *OperationLogController) Page(c *gin.Context) {
 		response.JSON(c, response.BuildError("invalid request body"))
 		return
 	}
-	if req.Page <= 0 { req.Page = 1 }
-	if req.Size <= 0 { req.Size = 20 }
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Size <= 0 {
+		req.Size = 20
+	}
 
 	var st, et time.Time
-	if req.StartTime != "" { st, _ = time.Parse("2006-01-02", req.StartTime) }
-	if req.EndTime != "" { et, _ = time.Parse("2006-01-02", req.EndTime) }
+	if req.StartTime != "" {
+		st, _ = time.Parse("2006-01-02", req.StartTime)
+	}
+	if req.EndTime != "" {
+		et, _ = time.Parse("2006-01-02", req.EndTime)
+	}
 
 	list, total, err := ctrl.svc.Page(loginUser.AccountNo, req.Action, req.ResourceID, st, et, req.Page, req.Size)
 	if err != nil {

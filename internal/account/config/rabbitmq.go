@@ -11,11 +11,11 @@ const (
 	ExchangeTraffic = "traffic.event.exchange"
 	ExchangeError   = "traffic.error.exchange"
 
-	QueueFreeInit   = "traffic.free_init.queue"
+	QueueFreeInit     = "traffic.free_init.queue"
 	QueueReleaseDelay = "traffic.release.delay.queue"
-	QueueRelease    = "traffic.release.queue"
+	QueueRelease      = "traffic.release.queue"
 	QueueOrderTraffic = "order.traffic.queue"
-	QueueError      = "traffic.error.queue"
+	QueueError        = "traffic.error.queue"
 
 	RoutingKeyFreeInit     = "traffic.free_init.routing.key"
 	RoutingKeyReleaseDelay = "traffic.release.delay.routing.key"
@@ -37,8 +37,8 @@ func SetupExchangesAndQueues(rmq *mq.RabbitMQ) {
 
 	// Delay queue for traffic rollback (60s TTL -> dead-letter -> release queue)
 	delayArgs := amqp.Table{
-		"x-message-ttl":          int64(60000),
-		"x-dead-letter-exchange": ExchangeTraffic,
+		"x-message-ttl":             int64(60000),
+		"x-dead-letter-exchange":    ExchangeTraffic,
 		"x-dead-letter-routing-key": RoutingKeyRelease,
 	}
 	if _, err := rmq.DeclareQueue(QueueReleaseDelay, delayArgs); err != nil {

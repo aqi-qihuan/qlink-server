@@ -170,8 +170,8 @@ func TestGenerateToken_EnvSecret(t *testing.T) {
 func TestGetStringClaim(t *testing.T) {
 	claims := jwt.MapClaims{
 		"key1": "value1",
-		"key2": 123,  // 非字符串
-		"key3": nil,  // nil 值
+		"key2": 123, // 非字符串
+		"key3": nil, // nil 值
 	}
 
 	assert.Equal(t, "value1", getStringClaim(claims, "key1"))

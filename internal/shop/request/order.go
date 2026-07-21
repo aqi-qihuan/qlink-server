@@ -8,7 +8,7 @@ type ConfirmOrderRequest struct {
 	PayType           string  `json:"payType"`    // WECHAT_PAY/ALI_PAY
 	TotalAmount       float64 `json:"totalAmount"`
 	PayAmount         float64 `json:"realPayAmount"`
-	Token             string  `json:"token"`             // anti-resubmit token
+	Token             string  `json:"token"` // anti-resubmit token
 	BillType          string  `json:"billType"`
 	BillHeader        string  `json:"billHeader"`
 	BillContent       string  `json:"billContent"`

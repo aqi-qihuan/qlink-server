@@ -13,18 +13,18 @@ import (
 	"github.com/aqi/qlink-server/internal/common/model"
 	"github.com/aqi/qlink-server/internal/common/mq"
 	"github.com/aqi/qlink-server/internal/common/util"
-	shopdb "github.com/aqi/qlink-server/internal/shop/model"
 	"github.com/aqi/qlink-server/internal/shop/component"
+	shopdb "github.com/aqi/qlink-server/internal/shop/model"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
 type CallbackController struct {
-	rdb     *redis.Client
-	rmq     *mq.RabbitMQ
-	payCfg  *component.PayConfig
-	db      *gorm.DB // for direct order update when MQ unavailable
+	rdb    *redis.Client
+	rmq    *mq.RabbitMQ
+	payCfg *component.PayConfig
+	db     *gorm.DB // for direct order update when MQ unavailable
 }
 
 func NewCallbackController(rdb *redis.Client, rmq *mq.RabbitMQ, payCfg *component.PayConfig, db *gorm.DB) *CallbackController {

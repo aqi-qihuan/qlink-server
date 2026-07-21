@@ -23,9 +23,9 @@ import (
 const orderPayTimeoutMills = 1800000 // 30 minutes
 
 type OrderService struct {
-	db        *gorm.DB
-	rdb       *redis.Client
-	rmq       *mq.RabbitMQ
+	db         *gorm.DB
+	rdb        *redis.Client
+	rmq        *mq.RabbitMQ
 	payFactory *shopmodel.PayFactory
 }
 
@@ -75,24 +75,24 @@ func (s *OrderService) Confirm(accountNo int64, nickname string, req *request.Co
 	snapshot, _ := json.Marshal(product)
 
 	order := shopdb.ProductOrderDO{
-		ID:              int64(util.GenerateSnowflakeID()),
-		ProductID:       product.ID,
-		ProductTitle:    product.Title,
-		ProductAmount:   product.Amount,
-		ProductSnapshot: string(snapshot),
-		BuyNum:          req.BuyNum,
-		OutTradeNo:      outTradeNo,
-		State:           string(enums.ORDER_NEW),
-		CreateTime:      time.Now(),
-		TotalAmount:     req.TotalAmount,
-		PayAmount:       req.PayAmount,
-		PayType:         req.PayType,
-		Nickname:        nickname,
-		AccountNo:       accountNo,
-		Del:             0,
-		BillType:        req.BillType,
-		BillHeader:      req.BillHeader,
-		BillContent:     req.BillContent,
+		ID:                int64(util.GenerateSnowflakeID()),
+		ProductID:         product.ID,
+		ProductTitle:      product.Title,
+		ProductAmount:     product.Amount,
+		ProductSnapshot:   string(snapshot),
+		BuyNum:            req.BuyNum,
+		OutTradeNo:        outTradeNo,
+		State:             string(enums.ORDER_NEW),
+		CreateTime:        time.Now(),
+		TotalAmount:       req.TotalAmount,
+		PayAmount:         req.PayAmount,
+		PayType:           req.PayType,
+		Nickname:          nickname,
+		AccountNo:         accountNo,
+		Del:               0,
+		BillType:          req.BillType,
+		BillHeader:        req.BillHeader,
+		BillContent:       req.BillContent,
 		BillReceiverPhone: req.BillReceiverPhone,
 		BillReceiverEmail: req.BillReceiverEmail,
 	}
@@ -119,14 +119,14 @@ func (s *OrderService) Confirm(accountNo int64, nickname string, req *request.Co
 	}
 
 	payInfo := &shopmodel.PayInfoVO{
-		OutTradeNo:        outTradeNo,
-		PayFee:            req.PayAmount,
-		PayType:           req.PayType,
-		ClientType:        req.ClientType,
-		Title:             product.Title,
-		Description:       product.Detail,
+		OutTradeNo:           outTradeNo,
+		PayFee:               req.PayAmount,
+		PayType:              req.PayType,
+		ClientType:           req.ClientType,
+		Title:                product.Title,
+		Description:          product.Detail,
 		OrderPayTimeoutMills: orderPayTimeoutMills,
-		AccountNo:         accountNo,
+		AccountNo:            accountNo,
 	}
 
 	payResult, err := strategy.UnifiedOrder(payInfo)
@@ -135,7 +135,7 @@ func (s *OrderService) Confirm(accountNo int64, nickname string, req *request.Co
 	}
 
 	return map[string]interface{}{
-		"code_url":    payResult,
+		"code_url":     payResult,
 		"out_trade_no": outTradeNo,
 	}, nil
 }

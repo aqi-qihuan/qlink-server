@@ -29,7 +29,7 @@ func (ctrl *ABTestController) Create(c *gin.Context) {
 	}
 	var req request.CreateABTestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.JSON(c, response.BuildError("invalid request body: " + err.Error()))
+		response.JSON(c, response.BuildError("invalid request body: "+err.Error()))
 		return
 	}
 	resp := ctrl.svc.Create(&req, loginUser.AccountNo)
@@ -45,7 +45,7 @@ func (ctrl *ABTestController) List(c *gin.Context) {
 	}
 	var req request.ABTestListRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.JSON(c, response.BuildError("invalid request body: " + err.Error()))
+		response.JSON(c, response.BuildError("invalid request body: "+err.Error()))
 		return
 	}
 	resp := ctrl.svc.List(&req, loginUser.AccountNo)
@@ -63,7 +63,7 @@ func (ctrl *ABTestController) Detail(c *gin.Context) {
 		ID int64 `json:"id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.JSON(c, response.BuildError("invalid request body: " + err.Error()))
+		response.JSON(c, response.BuildError("invalid request body: "+err.Error()))
 		return
 	}
 	resp := ctrl.svc.Get(req.ID)
@@ -82,7 +82,7 @@ func (ctrl *ABTestController) Update(c *gin.Context) {
 		request.UpdateABTestRequest
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.JSON(c, response.BuildError("invalid request body: " + err.Error()))
+		response.JSON(c, response.BuildError("invalid request body: "+err.Error()))
 		return
 	}
 	resp := ctrl.svc.Update(req.ID, &req.UpdateABTestRequest)
@@ -101,7 +101,7 @@ func (ctrl *ABTestController) Start(c *gin.Context) {
 		request.StartABTestRequest
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.JSON(c, response.BuildError("invalid request body: " + err.Error()))
+		response.JSON(c, response.BuildError("invalid request body: "+err.Error()))
 		return
 	}
 	resp := ctrl.svc.Start(req.ID, &req.StartABTestRequest)
@@ -120,7 +120,7 @@ func (ctrl *ABTestController) Stop(c *gin.Context) {
 		request.StopABTestRequest
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.JSON(c, response.BuildError("invalid request body: " + err.Error()))
+		response.JSON(c, response.BuildError("invalid request body: "+err.Error()))
 		return
 	}
 	resp := ctrl.svc.Stop(req.ID, &req.StopABTestRequest)
@@ -138,7 +138,7 @@ func (ctrl *ABTestController) Delete(c *gin.Context) {
 		ID int64 `json:"id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.JSON(c, response.BuildError("invalid request body: " + err.Error()))
+		response.JSON(c, response.BuildError("invalid request body: "+err.Error()))
 		return
 	}
 	resp := ctrl.svc.Delete(req.ID)
@@ -156,7 +156,7 @@ func (ctrl *ABTestController) Statistics(c *gin.Context) {
 		ID int64 `json:"id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.JSON(c, response.BuildError("invalid request body: " + err.Error()))
+		response.JSON(c, response.BuildError("invalid request body: "+err.Error()))
 		return
 	}
 	resp := ctrl.svc.Statistics(req.ID)

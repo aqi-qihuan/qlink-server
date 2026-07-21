@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -93,6 +94,37 @@ func assertSuccess(t *testing.T, name string, result map[string]interface{}, err
 
 func md5Hash(s string) string {
 	return fmt.Sprintf("%X", md5.Sum([]byte(s)))
+}
+
+// ========== Preconditions Guard ==========
+//
+// Integration tests need all 6 services + Redis running locally. When they are
+// not reachable (e.g. Docker daemon stopped), the whole package is skipped
+// cleanly instead of failing hard, so `go test ./...` stays green in CI/envs
+// without the full stack. Bring the stack up with:
+//
+//	docker-compose up -d        # starts mysql/redis/rabbitmq/kafka/clickhouse/minio + 6 services
+//	go test ./tests/integration/... -v -count=1 -timeout=10m
+//
+// (Set ALI_* / WECHAT_* / AI_* env vars for the payment/AI flows to be exercised.)
+
+func servicesReachable() bool {
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(accountURL + "/health")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == 200
+}
+
+func TestMain(m *testing.M) {
+	if !servicesReachable() {
+		fmt.Println("SKIP: integration tests require running services (docker-compose up -d) + Redis on localhost:8081-8006/6379.")
+		fmt.Println("      Bring the stack up, then re-run: go test ./tests/integration/... -v -count=1")
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
 }
 
 // ========== Health Checks ==========

@@ -27,7 +27,7 @@ func NewABTestService(db *gorm.DB, rdb *redis.Client) *ABTestService {
 }
 
 // Create creates an AB test with variants.
-func (s *ABTestService) Create(req *request.CreateABTestRequest, accountNo int64) (*response.JsonData) {
+func (s *ABTestService) Create(req *request.CreateABTestRequest, accountNo int64) *response.JsonData {
 	// Check no active test for this short link
 	existing, _ := s.repo.FindActiveByShortLinkCode(req.ShortLinkCode)
 	if existing != nil {
@@ -85,7 +85,7 @@ func (s *ABTestService) Create(req *request.CreateABTestRequest, accountNo int64
 }
 
 // Get returns AB test details with variants.
-func (s *ABTestService) Get(id int64) (*response.JsonData) {
+func (s *ABTestService) Get(id int64) *response.JsonData {
 	t, err := s.repo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -97,7 +97,7 @@ func (s *ABTestService) Get(id int64) (*response.JsonData) {
 }
 
 // Update updates AB test metadata.
-func (s *ABTestService) Update(id int64, req *request.UpdateABTestRequest) (*response.JsonData) {
+func (s *ABTestService) Update(id int64, req *request.UpdateABTestRequest) *response.JsonData {
 	t, err := s.repo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -128,7 +128,7 @@ func (s *ABTestService) Update(id int64, req *request.UpdateABTestRequest) (*res
 }
 
 // Start starts a draft AB test.
-func (s *ABTestService) Start(id int64, req *request.StartABTestRequest) (*response.JsonData) {
+func (s *ABTestService) Start(id int64, req *request.StartABTestRequest) *response.JsonData {
 	t, err := s.repo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -160,7 +160,7 @@ func (s *ABTestService) Start(id int64, req *request.StartABTestRequest) (*respo
 }
 
 // Stop stops a running AB test.
-func (s *ABTestService) Stop(id int64, req *request.StopABTestRequest) (*response.JsonData) {
+func (s *ABTestService) Stop(id int64, req *request.StopABTestRequest) *response.JsonData {
 	t, err := s.repo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -186,7 +186,7 @@ func (s *ABTestService) Stop(id int64, req *request.StopABTestRequest) (*respons
 }
 
 // Delete soft-deletes an AB test (draft only).
-func (s *ABTestService) Delete(id int64) (*response.JsonData) {
+func (s *ABTestService) Delete(id int64) *response.JsonData {
 	t, err := s.repo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -204,7 +204,7 @@ func (s *ABTestService) Delete(id int64) (*response.JsonData) {
 }
 
 // List returns paginated AB test list.
-func (s *ABTestService) List(req *request.ABTestListRequest, accountNo int64) (*response.JsonData) {
+func (s *ABTestService) List(req *request.ABTestListRequest, accountNo int64) *response.JsonData {
 	page := req.Page
 	if page < 1 {
 		page = 1
@@ -233,7 +233,7 @@ func (s *ABTestService) List(req *request.ABTestListRequest, accountNo int64) (*
 }
 
 // Statistics returns click statistics for an AB test.
-func (s *ABTestService) Statistics(id int64) (*response.JsonData) {
+func (s *ABTestService) Statistics(id int64) *response.JsonData {
 	t, err := s.repo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

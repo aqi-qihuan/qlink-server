@@ -79,11 +79,13 @@ func (r *RabbitMQ) Consume(queueName, consumerTag string, handler func([]byte) e
 		return fmt.Errorf("consume failed: %w", err)
 	}
 
-	// Monitor connection close — log fatal so the container restarts.
+	// Monitor connection close — log error but don't kill the process.
+	// In production, implement reconnection with backoff + re-declare exchanges/queues.
+	// For now, log and let publish operations fail gracefully (they have 5s timeout).
 	go func() {
 		closeChan := r.conn.NotifyClose(make(chan *amqp.Error, 1))
 		if amqpErr, ok := <-closeChan; ok {
-			log.Fatalf("[RabbitMQ] connection lost on consumer %s: %v — process will restart", queueName, amqpErr)
+			log.Printf("[RabbitMQ] connection lost on consumer %s: %v — publish operations will fail until reconnected", queueName, amqpErr)
 		}
 	}()
 

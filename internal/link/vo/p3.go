@@ -21,8 +21,8 @@ type BrandConfigVO struct {
 
 // URLSafeCheckVO is the response for URL safety check.
 type URLSafeCheckVO struct {
-	Safe    bool   `json:"safe"`
-	Message string `json:"message"`
-	SSL     bool   `json:"ssl"`
+	Safe      bool   `json:"safe"`
+	Message   string `json:"message"`
+	SSL       bool   `json:"ssl"`
 	Reachable bool   `json:"reachable"`
 }

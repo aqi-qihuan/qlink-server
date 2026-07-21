@@ -69,7 +69,9 @@ func (c *URLSafeChecker) Check(rawURL string) *vo.URLSafeCheckVO {
 	} else {
 		// Try HTTPS HEAD to check if SSL is available
 		httpsURL := "https://" + parsed.Host + parsed.Path
-		if parsed.RawQuery != "" { httpsURL += "?" + parsed.RawQuery }
+		if parsed.RawQuery != "" {
+			httpsURL += "?" + parsed.RawQuery
+		}
 		resp, err := c.doHEAD(httpsURL)
 		if err == nil {
 			resp.Body.Close()

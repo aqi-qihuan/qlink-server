@@ -41,15 +41,15 @@ func ValidateJWTSecret() error {
 func GenerateToken(loginUser *model.LoginUser) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub":       subject,
-		"iat":       now.Unix(),
-		"exp":       now.Add(tokenExpired).Unix(),
-		"head_img":  loginUser.HeadImg,
+		"sub":        subject,
+		"iat":        now.Unix(),
+		"exp":        now.Add(tokenExpired).Unix(),
+		"head_img":   loginUser.HeadImg,
 		"account_no": loginUser.AccountNo,
-		"username":  loginUser.Username,
-		"mail":      loginUser.Mail,
-		"phone":     loginUser.Phone,
-		"auth":      loginUser.Auth,
+		"username":   loginUser.Username,
+		"mail":       loginUser.Mail,
+		"phone":      loginUser.Phone,
+		"auth":       loginUser.Auth,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(getJWTSecret()))

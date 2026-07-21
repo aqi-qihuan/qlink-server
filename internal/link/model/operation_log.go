@@ -6,7 +6,7 @@ import "time"
 type OperationLogDO struct {
 	ID         int64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	AccountNo  int64     `gorm:"column:account_no;index" json:"account_no"`
-	Action     string    `gorm:"column:action;size:64" json:"action"`   // e.g. link:create, link:delete, link:status, domain:create
+	Action     string    `gorm:"column:action;size:64" json:"action"`      // e.g. link:create, link:delete, link:status, domain:create
 	Resource   string    `gorm:"column:resource;size:128" json:"resource"` // e.g. short_link:aBc123
 	ResourceID string    `gorm:"column:resource_id;size:128" json:"resource_id"`
 	IP         string    `gorm:"column:ip;size:64" json:"ip"`

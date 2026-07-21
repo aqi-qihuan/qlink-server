@@ -4,14 +4,14 @@ import "time"
 
 // CreateABTestRequest create AB test
 type CreateABTestRequest struct {
-	ShortLinkCode string                    `json:"shortLinkCode" binding:"required"`
-	GroupID       int64                     `json:"groupId" binding:"required"`
-	Name          string                    `json:"name" binding:"required"`
-	Description   string                    `json:"description"`
-	TrafficSplit  string                    `json:"trafficSplit"`
-	StartTime     *time.Time                `json:"startTime"`
-	EndTime       *time.Time                `json:"endTime"`
-	Variants      []CreateABTestVariantReq  `json:"variants" binding:"required,min=2"`
+	ShortLinkCode string                   `json:"shortLinkCode" binding:"required"`
+	GroupID       int64                    `json:"groupId" binding:"required"`
+	Name          string                   `json:"name" binding:"required"`
+	Description   string                   `json:"description"`
+	TrafficSplit  string                   `json:"trafficSplit"`
+	StartTime     *time.Time               `json:"startTime"`
+	EndTime       *time.Time               `json:"endTime"`
+	Variants      []CreateABTestVariantReq `json:"variants" binding:"required,min=2"`
 }
 
 type CreateABTestVariantReq struct {

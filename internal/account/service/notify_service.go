@@ -20,8 +20,8 @@ const (
 )
 
 type NotifyService struct {
-	rdb      *redis.Client
-	smsProv  sms.Provider
+	rdb     *redis.Client
+	smsProv sms.Provider
 }
 
 func NewNotifyService(rdb *redis.Client, smsProv sms.Provider) *NotifyService {

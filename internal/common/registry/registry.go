@@ -11,12 +11,12 @@ import (
 
 // ServiceInstance represents a registered service instance.
 type ServiceInstance struct {
-	ServiceName string `json:"serviceName"`
-	InstanceID  string `json:"instanceId"`
-	Host        string `json:"host"`
-	Port        string `json:"port"`
-	Healthy     bool   `json:"healthy"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	ServiceName   string            `json:"serviceName"`
+	InstanceID    string            `json:"instanceId"`
+	Host          string            `json:"host"`
+	Port          string            `json:"port"`
+	Healthy       bool              `json:"healthy"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
 	lastHeartbeat time.Time
 }
 

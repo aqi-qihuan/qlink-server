@@ -22,8 +22,8 @@ const (
 	RoutingKeyUpdate     = "order.update.traffic.routing.key"
 	RoutingKeyError      = "order.error.routing.key"
 
-	BindingClose  = "order.close.delay.key"
-	BindingUpdate = "order.update.*.routing.key"
+	BindingClose   = "order.close.delay.key"
+	BindingUpdate  = "order.update.*.routing.key"
 	BindingTraffic = "order.*.traffic.routing.key"
 )
 
@@ -36,10 +36,11 @@ func SetupExchangesAndQueues(rmq *mq.RabbitMQ) {
 		log.Fatalf("declare exchange %s: %v", ExchangeError, err)
 	}
 
-	// Delay queue: 60s TTL -> dead-letter -> close queue
+	// Delay queue: 5min TTL (300000ms) -> dead-letter -> close queue
+	// 与 Java 版一致：给支付回调留足时间
 	delayArgs := amqp.Table{
-		"x-message-ttl":           int64(60000),
-		"x-dead-letter-exchange":  ExchangeOrder,
+		"x-message-ttl":             int64(300000),
+		"x-dead-letter-exchange":    ExchangeOrder,
 		"x-dead-letter-routing-key": RoutingKeyClose,
 	}
 	if _, err := rmq.DeclareQueue(QueueCloseDelay, delayArgs); err != nil {

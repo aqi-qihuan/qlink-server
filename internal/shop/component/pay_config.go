@@ -17,7 +17,7 @@ type PayConfig struct {
 	WechatMchID     string
 	WechatAPIKey    string // V2 API key for MD5 signing
 	WechatNotifyURL string
-	WechatSandbox   bool   // true = sandbox URL, false = production URL
+	WechatSandbox   bool // true = sandbox URL, false = production URL
 }
 
 func PayConfigFromEnv() PayConfig {

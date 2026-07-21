@@ -4,18 +4,18 @@ import (
 	"context"
 	"os"
 
-	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/components/model"
 )
 
 // AIConfig holds configuration for AI features.
 type AIConfig struct {
 	// LLM provider settings
-	Provider   string // "openai", "doubao", "deepseek"
-	APIKey     string
-	BaseURL    string
-	ModelName  string
-	MaxTokens  int
+	Provider    string // "openai", "doubao", "deepseek"
+	APIKey      string
+	BaseURL     string
+	ModelName   string
+	MaxTokens   int
 	Temperature float32
 }
 

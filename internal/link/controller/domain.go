@@ -13,8 +13,8 @@ import (
 )
 
 type DomainController struct {
-	db     *gorm.DB
-	opLog  *service.OperationLogService
+	db    *gorm.DB
+	opLog *service.OperationLogService
 }
 
 func NewDomainController(db *gorm.DB, opLog *service.OperationLogService) *DomainController {
@@ -95,8 +95,12 @@ func (ctrl *DomainController) Update(c *gin.Context) {
 	}
 
 	updates := map[string]interface{}{}
-	if req.DomainType != "" { updates["domain_type"] = req.DomainType }
-	if req.Value != "" { updates["value"] = req.Value }
+	if req.DomainType != "" {
+		updates["domain_type"] = req.DomainType
+	}
+	if req.Value != "" {
+		updates["value"] = req.Value
+	}
 	if len(updates) == 0 {
 		response.JSON(c, response.BuildError("nothing to update"))
 		return
