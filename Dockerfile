@@ -4,7 +4,7 @@
 # ============================================================
 
 # ---------- Go 版本（与 go.mod 保持一致） ----------
-ARG GO_VERSION=1.26
+ARG GO_VERSION=1.27
 
 # ============================================================
 #  Stage 1: 缓存依赖（仅�?go.mod/go.sum 变动时重新下载）
@@ -46,7 +46,7 @@ RUN go build -ldflags="${LDFLAGS}" -o /out/gateway  ./cmd/gateway/  && \
 # ============================================================
 #  Stage 3: 公共运行时基础（所有服务共享，减少重复层）
 # ============================================================
-FROM alpine:3.21 AS runtime-base
+FROM alpine:3.22 AS runtime-base
 
 RUN apk --no-cache add \
         ca-certificates \

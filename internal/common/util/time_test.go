@@ -35,8 +35,11 @@ func TestGetStartOfDay(t *testing.T) {
 }
 
 func TestIsToday(t *testing.T) {
-	assert.True(t, IsToday(time.Now()), "当前时间应是今天")
-	assert.True(t, IsToday(time.Now().Add(-1*time.Hour)), "1小时前应是今天")
+	now := time.Now()
+	assert.True(t, IsToday(now), "当前时间应是今天")
+	// 用当天固定时刻而非 Now-1h 构造：Now-1h 在午夜后一小时内会落到昨天，导致误报
+	todayMorning := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 30, 0, now.Location())
+	assert.True(t, IsToday(todayMorning), "今天 00:00:30 应是今天")
 }
 
 func TestIsToday_Yesterday(t *testing.T) {
