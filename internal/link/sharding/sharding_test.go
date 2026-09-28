@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/aqi/qlink-server/internal/common/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,4 +61,31 @@ func TestGetRandomDBPrefix_NegativeHashNoOverflow(t *testing.T) {
 	h2 := int32(-1867378635) // "123456789"
 	idx2 := int(uint32(h2)) % len(DBPrefixList)
 	assert.GreaterOrEqual(t, idx2, 0, "负值哈希索引不应为负")
+}
+
+// ========== 路由解析与 code 生成语义一致性（跳转 404 排障回归） ==========
+
+func TestRouteShortLink_ParsesEmbeddedShards(t *testing.T) {
+	// code 格式: dbPrefix + base62(hash) + tableSuffix（见 component.CreateShortLinkCode）,
+	// RouteShortLink 必须解析首尾字符还原分片。
+	// 以下均为远程库存量数据, 所在分片与解析结果 100% 吻合(2026-09-28 实测 10/10):
+	cases := []struct{ code, dbPrefix, tableSuffix string }{
+		{"03rCsNC0", "0", "0"},
+		{"021Tgota", "0", "a"},
+		{"1oQKYJ0", "1", "0"},
+		{"115P8y2a", "1", "a"},
+		{"a3z3JYk0", "a", "0"},
+		{"a4hEvL30", "a", "0"},
+	}
+	for _, c := range cases {
+		dbPrefix, tableSuffix := RouteShortLink(c.code)
+		assert.Equal(t, c.dbPrefix, dbPrefix, "DB 分片解析错误: %q", c.code)
+		assert.Equal(t, c.tableSuffix, tableSuffix, "表分片解析错误: %q", c.code)
+	}
+}
+
+func TestJavaStringHashCode_JavaCompat(t *testing.T) {
+	// 与 Java String.hashCode() 对齐的已知值(存量数据由 Java 按此路由写入)
+	assert.Equal(t, int32(0), util.JavaStringHashCode(""))
+	assert.Equal(t, int32(-1867378635), util.JavaStringHashCode("123456789"))
 }
