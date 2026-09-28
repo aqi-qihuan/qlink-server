@@ -62,8 +62,9 @@ type StatsKey struct {
 	DeviceType  string
 }
 
+// Column names must match the ClickHouse table exactly (snake_case, ts not visitTime).
 const insertSQL = `INSERT INTO visit_stats (
-	code, referer, isNew, accountNo,
-	province, city, ip, browserName, os, deviceType,
-	pv, uv, startTime, endTime, visitTime
+	code, referer, is_new, account_no,
+	province, city, ip, browser_name, os, device_type,
+	pv, uv, start_time, end_time, ts
 ) VALUES`
