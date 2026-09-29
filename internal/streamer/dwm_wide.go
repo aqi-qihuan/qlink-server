@@ -187,6 +187,7 @@ func parseUserAgent(uaStr string) (browserName, os, osVersion, deviceType, manuf
 	if os == "" {
 		os = "Unknown"
 	}
+	os = normalizeOSGroup(os)
 
 	platform := ua.Platform()
 	deviceType = classifyDeviceType(platform, os)
@@ -194,6 +195,30 @@ func parseUserAgent(uaStr string) (browserName, os, osVersion, deviceType, manuf
 	osVersion = extractOSVersion(uaStr)
 
 	return
+}
+
+// normalizeOSGroup maps the raw OS description from mssola/user_agent
+// (e.g. "Windows 10", "CPU iPhone OS 17_5 like Mac OS X") to the OS *group*
+// name used by the Java original (bitwalker UserAgent:
+// operatingSystem.getGroup().getName()): Windows / Mac OS X / iOS /
+// Android / Linux / Unknown. Keeps the ClickHouse os column consistent
+// with data produced by the Java pipeline.
+func normalizeOSGroup(os string) string {
+	o := strings.ToLower(os)
+	switch {
+	case strings.Contains(o, "windows"):
+		return "Windows"
+	case strings.Contains(o, "android"):
+		return "Android"
+	case strings.Contains(o, "iphone"), strings.Contains(o, "ipad"), strings.Contains(o, "ios"):
+		return "iOS"
+	case strings.Contains(o, "mac os x"), strings.Contains(o, "macintosh"):
+		return "Mac OS X"
+	case strings.Contains(o, "linux"):
+		return "Linux"
+	default:
+		return "Unknown"
+	}
 }
 
 func classifyDeviceType(platform, os string) string {
