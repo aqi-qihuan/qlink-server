@@ -16,6 +16,17 @@ const dashboardCacheTTL = 60 * time.Second
 func (s *VisitStatsService) GetDashboard(accountNo int64, startTime, endTime string) (*vo.DashboardVO, error) {
 	ctx := context.Background()
 
+	// Default range: last 30 days — resolved BEFORE the cache key is built,
+	// so an empty-range request caches under its resolved dates
+	// (data:dashboard:<no>:<start>:<end>) instead of a shared
+	// "data:dashboard:<no>::" key whose payload goes stale across midnight.
+	if startTime == "" {
+		startTime = time.Now().AddDate(0, 0, -30).Format("20060102")
+	}
+	if endTime == "" {
+		endTime = time.Now().Format("20060102")
+	}
+
 	// Check Redis cache first
 	cacheKey := fmt.Sprintf("data:dashboard:%d:%s:%s", accountNo, startTime, endTime)
 	if s.rdb != nil {
@@ -28,13 +39,6 @@ func (s *VisitStatsService) GetDashboard(accountNo int64, startTime, endTime str
 		}
 	}
 
-	// Default range: last 30 days
-	if startTime == "" {
-		startTime = time.Now().AddDate(0, 0, -30).Format("20060102")
-	}
-	if endTime == "" {
-		endTime = time.Now().Format("20060102")
-	}
 	today := time.Now().Format("20060102")
 
 	d := &vo.DashboardVO{}
