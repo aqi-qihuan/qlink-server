@@ -21,7 +21,7 @@ BIN_DIR="${ROOT}/bin"
 APP_NAMES=(gateway account link data shop streamer)
 AI_NAMES=(ai)
 
-PORT_MAP=(
+declare -A PORT_MAP=(
   [gateway]="8888"
   [account]="8001"
   [link]="8003"
