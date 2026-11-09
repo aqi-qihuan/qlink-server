@@ -15,8 +15,11 @@ import (
 
 	"github.com/aqi/qlink-server/internal/common/middleware"
 	"github.com/aqi/qlink-server/internal/common/registry"
+	"github.com/aqi/qlink-server/internal/common/telemetry"
 	"github.com/gin-gonic/gin"
 )
+
+const serviceName = "qlink-gateway"
 
 // Shared transport with connection pooling
 var transport = &http.Transport{
@@ -28,6 +31,9 @@ var transport = &http.Transport{
 
 func main() {
 	godotenv.Load()
+
+	shutdown := telemetry.Setup(serviceName)
+	defer telemetry.ShutdownWithTimeout(shutdown)
 
 	port := getEnv("PORT", "8888")
 	linkAddr := getEnv("LINK_SERVICE", "http://localhost:8003")
@@ -50,6 +56,8 @@ func main() {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(telemetry.HTTPMiddleware(serviceName))
+	r.GET("/metrics", telemetry.MetricsHandler())
 	r.Use(middleware.CorsMiddleware())
 
 	// Distributed rate limiter: 5000 req/s per IP, 10s sliding window

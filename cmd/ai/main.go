@@ -10,11 +10,17 @@ import (
 	"github.com/aqi/qlink-server/internal/ai/handler"
 	"github.com/aqi/qlink-server/internal/common/interceptor"
 	"github.com/aqi/qlink-server/internal/common/middleware"
+	"github.com/aqi/qlink-server/internal/common/telemetry"
 	"github.com/gin-gonic/gin"
 )
 
+const serviceName = "qlink-ai"
+
 func main() {
 	godotenv.Load()
+
+	shutdown := telemetry.Setup(serviceName)
+	defer telemetry.ShutdownWithTimeout(shutdown)
 
 	port := getEnv("PORT", "8006")
 
@@ -26,6 +32,8 @@ func main() {
 	aiHandler := handler.NewAIHandler(cm)
 
 	r := gin.Default()
+	r.Use(telemetry.HTTPMiddleware(serviceName))
+	r.GET("/metrics", telemetry.MetricsHandler())
 	r.Use(middleware.CorsMiddleware())
 
 	// Health check (Docker HEALTHCHECK)

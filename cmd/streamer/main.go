@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,11 +14,17 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/aqi/qlink-server/internal/common/telemetry"
 	"github.com/aqi/qlink-server/internal/streamer"
 )
 
+const serviceName = "qlink-streamer"
+
 func main() {
 	godotenv.Load()
+
+	shutdown := telemetry.Setup(serviceName)
+	defer telemetry.ShutdownWithTimeout(shutdown)
 
 	kafkaBrokers := getEnv("KAFKA_BROKERS", "localhost:9092")
 	redisAddr := getEnv("REDIS_ADDR", "localhost:6379")
@@ -83,6 +91,41 @@ func main() {
 	pipeline := streamer.NewPipeline(cfg, rdb, chConn)
 	pipeline.Start()
 
+	// streamer 无业务 HTTP 端口，单独暴露 8007 供 Prometheus 抓取。
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", telemetry.MetricsHTTPHandler())
+	metricsMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	metricsSrv := &http.Server{
+		Addr:              ":" + getEnv("STREAMER_METRICS_PORT", "8007"),
+		Handler:           metricsMux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	go func() {
+		if err := metricsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("[WARN] streamer metrics server: %v", err)
+		}
+	}()
+
+	// 每 30s 发一条心跳 span，让无 HTTP 入口的 streamer 在 OAP 中可见。
+	heartbeatCtx, cancelHeartbeat := context.WithCancel(context.Background())
+	defer cancelHeartbeat()
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-heartbeatCtx.Done():
+				return
+			case <-ticker.C:
+				_, end := telemetry.StartSpan(heartbeatCtx, "qlink/streamer", "streamer.heartbeat")
+				end()
+			}
+		}
+	}()
+
 	log.Println("[Streamer] All 4 pipeline stages running")
 	log.Println("[Streamer] ODS ??DWD ??DWM-Wide ??DWM-UV ??DWS ??ClickHouse")
 
@@ -90,9 +133,17 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigCh
+	signal.Stop(sigCh)
 	log.Printf("[Streamer] Received signal %v, shutting down...", sig)
 
 	pipeline.Stop()
+
+	metricsCtx, cancelMetrics := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelMetrics()
+	if err := metricsSrv.Shutdown(metricsCtx); err != nil {
+		log.Printf("[WARN] streamer metrics shutdown: %v", err)
+	}
+
 	rdb.Close()
 	chConn.Close()
 	log.Println("[Streamer] Shutdown complete")

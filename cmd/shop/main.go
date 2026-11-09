@@ -12,6 +12,7 @@ import (
 	"github.com/aqi/qlink-server/internal/common/middleware"
 	"github.com/aqi/qlink-server/internal/common/mq"
 	"github.com/aqi/qlink-server/internal/common/registry"
+	"github.com/aqi/qlink-server/internal/common/telemetry"
 	"github.com/aqi/qlink-server/internal/common/util"
 	"github.com/aqi/qlink-server/internal/shop/component"
 	"github.com/aqi/qlink-server/internal/shop/config"
@@ -24,8 +25,13 @@ import (
 	"gorm.io/gorm"
 )
 
+const serviceName = "qlink-shop"
+
 func main() {
 	godotenv.Load()
+
+	shutdown := telemetry.Setup(serviceName)
+	defer telemetry.ShutdownWithTimeout(shutdown)
 
 	// Startup security checks
 	if err := util.ValidateJWTSecret(); err != nil {
@@ -100,6 +106,8 @@ func main() {
 
 	// Gin router
 	r := gin.Default()
+	r.Use(telemetry.HTTPMiddleware(serviceName))
+	r.GET("/metrics", telemetry.MetricsHandler())
 	r.Use(middleware.CorsMiddleware())
 
 	// Health check (Docker HEALTHCHECK)

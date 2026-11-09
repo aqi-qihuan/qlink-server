@@ -13,14 +13,14 @@ import (
 // ========== #6 限流器并发安全（mutex 替代有缺陷的 lock-free）==========
 
 func TestRateBucket_AllowRespectsBurst(t *testing.T) {
-	b := newRateBucket(1.0, 1) // burst=1 → 初始 1000 tokens
+	b := newRateBucket(0, 1) // burst=1 → 初始 1000 tokens，禁用 refill 保证断言确定性
 	assert.True(t, b.allow(), "第 1 次应放行")
 	assert.False(t, b.allow(), "burst 耗尽后应拒绝（无 refill 时）")
 }
 
 func TestRateBucket_AllowRespectsBurstMultiple(t *testing.T) {
 	burst := 5
-	b := newRateBucket(10.0, burst)
+	b := newRateBucket(0, burst) // 禁用 refill，避免 race 模式下墙钟推进造成偶发放行
 	allowed := 0
 	for i := 0; i < burst+3; i++ {
 		if b.allow() {
@@ -31,7 +31,7 @@ func TestRateBucket_AllowRespectsBurstMultiple(t *testing.T) {
 }
 
 func TestRateBucket_ConcurrentNoPanic(t *testing.T) {
-	b := newRateBucket(100.0, 2)
+	b := newRateBucket(0, 2) // 禁用 refill，只验证并发下 token 消费的原子性
 	const N = 200
 	var wg sync.WaitGroup
 	allowed := int64(0)
