@@ -72,6 +72,27 @@ python3 tools/pv_chain_regression.py --no-start
 - 全量联调 `PASS=44 / FAIL=0 / SKIP=2`（AI 两项因未启 LLM 跳过）。
 - PV 回归 6 条断言全通过，Kafka 4 段 ETL 写入 `visit_stats.visit_stats`。
 
+## 内存档位（2026-11-09 优化）
+
+`go-stack.sh` 按 4000 请求 / 32 并发压测峰值收紧：
+
+| 单元类型 | `MemoryHigh` | `MemoryMax` | `GOMEMLIMIT` |
+|---|---:|---:|---:|
+| gateway / account / link / data / shop / ai | 96M | 192M | 128MiB |
+| streamer | 256M | 512M | 320MiB |
+
+- 压测峰值：普通服务 cgroup 6.6–15.6 MiB，streamer 16.3 MiB，合计 67.9 MiB；新硬顶仍有 10–20 倍余量。
+- `GOMEMLIMIT` 是 Go runtime 软限，让 GC 在接近 cgroup 硬顶前主动归还内存，避免直接触发 `MemoryMax`。
+- 宿主硬顶合计从 **3328 MiB（3.25 GiB）** 降到 **1472 MiB（1.44 GiB）**。
+- 共享容器限额由 Java 仓库的 `deployments/dev/resources/mem-profile.sh` 切换：
+  ```bash
+  # Go 优化档：容器 cap 8320 MiB
+  bash ~/Projects/aqicloud-short-link/deployments/dev/resources/mem-profile.sh go --apply
+
+  # Java 回滚档：容器 cap 10368 MiB（切回 Java 前执行）
+  bash ~/Projects/aqicloud-short-link/deployments/dev/resources/mem-profile.sh java --apply
+  ```
+
 ## 数据面
 
 - MySQL 继承 Java 版库表；Go 版增量表由 `sql/30~34` 补齐。

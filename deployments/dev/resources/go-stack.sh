@@ -31,11 +31,16 @@ declare -A PORT_MAP=(
   [streamer]=""
 )
 
-# Go 进程实测内存远低于 Java，但仍设硬顶防失控
-UNIT_MEMORY_HIGH="256M"
-UNIT_MEMORY_MAX="512M"
-STREAMER_MEMORY_HIGH="512M"
-STREAMER_MEMORY_MAX="768M"
+# 压测基线（2026-11-09，4000 请求 / 32 并发）：
+#   普通服务 cgroup 峰值 6.6~15.6 MiB，streamer 16.3 MiB，合计 67.9 MiB。
+# 收紧后的硬顶仍约为峰值的 10~20 倍；GOMEMLIMIT 作为 Go runtime 软限，
+# 让 GC 在接近 cgroup 硬顶前主动归还内存，避免直接撞 MemoryMax。
+UNIT_MEMORY_HIGH="96M"
+UNIT_MEMORY_MAX="192M"
+UNIT_GOMEMLIMIT="128MiB"
+STREAMER_MEMORY_HIGH="256M"
+STREAMER_MEMORY_MAX="512M"
+STREAMER_GOMEMLIMIT="320MiB"
 
 unit_name() {
   printf '%s-%s.service' "${UNIT_PREFIX}" "$1"
@@ -80,12 +85,14 @@ start_service() {
   local port="${PORT_MAP[${name}]:-}"
   local mem_high="${UNIT_MEMORY_HIGH}"
   local mem_max="${UNIT_MEMORY_MAX}"
+  local go_mem_limit="${UNIT_GOMEMLIMIT}"
   local unit
   unit="$(unit_name "${name}")"
 
   if [[ "${name}" == "streamer" ]]; then
     mem_high="${STREAMER_MEMORY_HIGH}"
     mem_max="${STREAMER_MEMORY_MAX}"
+    go_mem_limit="${STREAMER_GOMEMLIMIT}"
   fi
 
   if systemctl --user is-active --quiet "${unit}"; then
@@ -107,11 +114,12 @@ start_service() {
     --property=MemorySwapMax=0
   )
   if [[ -n "${port}" ]]; then
-    props+=(--property=Environment=PORT="${port}")
+    props+=(--setenv=PORT="${port}")
   fi
+  props+=(--setenv=GOMEMLIMIT="${go_mem_limit}")
 
   systemd-run --user --unit="${unit%.service}" \
-    --description="qlink ${name} (Go, 8C16G tuned)" \
+    --description="qlink ${name} (Go memory optimized)" \
     "${props[@]}" \
     "${BIN_DIR}/${name}"
 }
