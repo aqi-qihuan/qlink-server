@@ -2,7 +2,7 @@
 """qlink-server 全量联调测试脚本 v2（修复字段名）
 覆盖：M01→M02→M03→M04→M05→M07→M09→M10→M11→M12→M14
 """
-import urllib.request, urllib.error, json, http.client, redis, sys, os
+import urllib.request, urllib.error, json, http.client, redis, sys, os, time
 from dotenv import load_dotenv
 
 # 自动加载 .env（gitignored，含真实凭据）
@@ -12,7 +12,7 @@ GATEWAY = os.environ.get("GATEWAY", "http://localhost:8888")
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PWD = os.environ.get("REDIS_PWD", "")
 UA = "qlink-test-client"
-PHONE = "13900139002"
+PHONE = "139" + f"{int(time.time()) % 100000000:08d}"
 PWD = "Test123456!"
 
 pass_c = fail_c = skip_c = 0
@@ -50,9 +50,21 @@ def skip(name, reason=""):
 
 rdb = redis.Redis(host=REDIS_HOST, port=6379, password=REDIS_PWD, decode_responses=True)
 
+def ai_reachable():
+    try:
+        urllib.request.urlopen("http://localhost:8006/health", timeout=2)
+        return True
+    except Exception:
+        return False
+
+AI_UP = ai_reachable()
+
 # ====== M01: 基础链路 ======
 print("\n===== M01: 基础链路 =====")
 for svc, path in [("account","/account-server/health"),("link","/link-server/health"),("shop","/shop-server/health"),("ai","/ai-server/health"),("gateway","/health")]:
+    if svc == "ai" and not AI_UP:
+        skip(f"健康-{svc}", "ai 服务未启动（本机无 Ollama，属预期）")
+        continue
     r = api("GET", path)
     test(f"健康-{svc}", r if "code" in r else {"code":0})
 
@@ -108,8 +120,13 @@ V["code"] = r.get("data",{}).get("code","") if isinstance(r.get("data"), dict) e
 V["mid"] = r.get("data",{}).get("id",0) if isinstance(r.get("data"), dict) else 0
 print(f"  [INFO] code={V['code']} mappingId={V['mid']}")
 
-# 分页
-r = api("POST", "/link-server/api/link/v1/page", {"page":1,"size":10,"groupId": V["gid"]}, token=V["token"])
+# 分页（MQ 异步落库，轮询直到列表非空）
+import time as _time
+for _ in range(10):
+    r = api("POST", "/link-server/api/link/v1/page", {"page":1,"size":10,"groupId": V["gid"]}, token=V["token"])
+    if isinstance(r.get("data"), dict) and r["data"].get("list"):
+        break
+    _time.sleep(0.5)
 test("分页查找", r)
 if isinstance(r.get("data"), dict) and r["data"].get("list"):
     V["mid"] = r["data"]["list"][0].get("id", V["mid"])
@@ -149,13 +166,28 @@ V["abId"] = r.get("data",{}).get("id",0) if isinstance(r.get("data"), dict) else
 
 test("AB列表", api("POST", "/link-server/api/ab_test/v1/page", {"page":1,"size":10}, token=V["token"]))
 
-# 启动+停止+删除
+# 启动 + 停止 + 删除（另建一个 draft 状态的实验验证删除）
 r = api("POST", "/link-server/api/ab_test/v1/start", {"id": V["abId"]}, token=V["token"])
 test("启动AB测试", r)
 r = api("POST", "/link-server/api/ab_test/v1/stop", {"id": V["abId"]}, token=V["token"])
 test("停止AB测试", r)
-r = api("POST", "/link-server/api/ab_test/v1/del", {"id": V["abId"]}, token=V["token"])
-test("删除AB测试", r)
+r2 = api("POST", "/link-server/api/ab_test/v1/add", {
+    "shortLinkCode": V["code"],
+    "groupId": V["gid"],
+    "name": "AB测试-删除验证",
+    "description": "draft 状态直接删除",
+    "trafficSplit": "50",
+    "variants": [
+        {"name": "控制组", "targetUrl": "https://github.com", "weight": 50, "isControl": 1},
+        {"name": "实验组", "targetUrl": "https://gitlab.com", "weight": 50, "isControl": 0},
+    ]
+}, token=V["token"])
+ab_del_id = r2.get("data",{}).get("id",0) if isinstance(r2.get("data"), dict) else 0
+if ab_del_id:
+    r = api("POST", "/link-server/api/ab_test/v1/del", {"id": ab_del_id}, token=V["token"])
+    test("删除AB测试(draft)", r)
+else:
+    skip("删除AB测试(draft)", "未拿到 draft 实验 ID")
 
 # ====== M07: 品牌 ======
 print("\n===== M07: 品牌定制 =====")
@@ -176,23 +208,23 @@ test("Token列表", api("POST", "/account-server/api/account/v1/api_token/list",
 print("\n===== M11: 商品与支付 =====")
 r = api("GET", "/shop-server/api/product/v1/list", token=V["token"])
 test("商品列表", r)
-# 获取商品价格
-product_price = 0.01
+# 动态取第一个商品（不再硬编码 id=2）
+product_id = 1
+product_price = 0.0
 if isinstance(r.get("data"), list) and r["data"]:
-    for p in r["data"]:
-        if p.get("id") == 2:
-            product_price = p.get("amount", 0.01) or p.get("price", 0.01)
-            break
-print(f"  [INFO] product price={product_price}")
+    product_id = r["data"][0].get("id", 1)
+    amount = r["data"][0].get("amount")
+    product_price = float(amount) if amount is not None else 0.0
+print(f"  [INFO] productId={product_id} price={product_price}")
 
-test("商品详情", api("GET", "/shop-server/api/product/v1/detail/2", token=V["token"]))
+test("商品详情", api("GET", f"/shop-server/api/product/v1/detail/{product_id}", token=V["token"]))
 r = api("GET", "/shop-server/api/order/v1/get_token", token=V["token"])
 test("下单令牌", r)
 order_token = r.get("data","") if isinstance(r.get("data"), str) else ""
 
 # 下单-微信（需要 token + totalAmount + realPayAmount + payType=WECHAT_PAY）
 r = api("POST", "/shop-server/api/order/v1/confirm", {
-    "productId": 2, "buyNum": 1, "payType": "WECHAT_PAY",
+    "productId": product_id, "buyNum": 1, "payType": "WECHAT_PAY",
     "totalAmount": product_price, "realPayAmount": product_price,
     "token": order_token, "clientType": "PC",
 }, token=V["token"])
@@ -208,7 +240,7 @@ if V.get("orderNo"):
 r = api("GET", "/shop-server/api/order/v1/get_token", token=V["token"])
 order_token2 = r.get("data","") if isinstance(r.get("data"), str) else ""
 r = api("POST", "/shop-server/api/order/v1/confirm", {
-    "productId": 2, "buyNum": 1, "payType": "ALI_PAY",
+    "productId": product_id, "buyNum": 1, "payType": "ALI_PAY",
     "totalAmount": product_price, "realPayAmount": product_price,
     "token": order_token2, "clientType": "PC",
 }, token=V["token"])
@@ -216,8 +248,11 @@ test("下单-支付宝", r)
 
 # ====== M12: AI ======
 print("\n===== M12: AI功能 =====")
-r = api("POST", "/ai-server/api/ai/v1/check_safety", {"url": "https://github.com"}, token=V["token"])
-test("URL安全检测AI", r)
+if not AI_UP:
+    skip("URL安全检测AI", "ai 服务未启动（本机无 Ollama，属预期）")
+else:
+    r = api("POST", "/ai-server/api/ai/v1/check_safety", {"url": "https://github.com"}, token=V["token"])
+    test("URL安全检测AI", r)
 
 # ====== M08: 数据统计 ======
 print("\n===== M08: 数据统计 =====")

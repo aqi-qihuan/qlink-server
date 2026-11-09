@@ -90,7 +90,7 @@ func (s *OrderService) Confirm(accountNo int64, nickname string, req *request.Co
 		Nickname:          nickname,
 		AccountNo:         accountNo,
 		Del:               0,
-		BillType:          req.BillType,
+		BillType:          shopdb.BillType(req.BillType),
 		BillHeader:        req.BillHeader,
 		BillContent:       req.BillContent,
 		BillReceiverPhone: req.BillReceiverPhone,

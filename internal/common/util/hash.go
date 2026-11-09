@@ -1,17 +1,66 @@
 package util
 
 import (
-	"github.com/spaolacci/murmur3"
+	"encoding/binary"
+	"math/bits"
 )
 
 // MurmurHash3Guava computes MurmurHash3 32-bit compatible with Guava's
 // Hashing.murmur3_32().hashUnencodedChars(param).padToLong().
 // Guava hashes UTF-16 code units (2 bytes per char, little-endian), NOT UTF-8 bytes.
+//
+// 这里使用纯 Go 实现 x86_32 算法，避免第三方 murmur3 库的 unsafe 指针算术
+// 在 go test -race/checkptr 下触发 fatal error。
 func MurmurHash3Guava(s string) uint64 {
-	// Convert string to UTF-16 LE byte sequence (BMP chars only for ASCII/Latin)
 	utf16le := stringToUTF16LE(s)
-	h := murmur3.Sum32(utf16le)
+	h := murmur3x8632(utf16le, 0)
 	return uint64(h) // zero-extend to 64-bit (padToLong)
+}
+
+// murmur3x8632 implements MurmurHash3 x86 32-bit with seed.
+func murmur3x8632(data []byte, seed uint32) uint32 {
+	const (
+		c1 = uint32(0xcc9e2d51)
+		c2 = uint32(0x1b873593)
+	)
+
+	h1 := seed
+	roundedEnd := len(data) &^ 3
+	for i := 0; i < roundedEnd; i += 4 {
+		k1 := binary.LittleEndian.Uint32(data[i : i+4])
+		k1 *= c1
+		k1 = bits.RotateLeft32(k1, 15)
+		k1 *= c2
+
+		h1 ^= k1
+		h1 = bits.RotateLeft32(h1, 13)
+		h1 = h1*5 + 0xe6546b64
+	}
+
+	var k1 uint32
+	tail := data[roundedEnd:]
+	switch len(tail) {
+	case 3:
+		k1 ^= uint32(tail[2]) << 16
+		fallthrough
+	case 2:
+		k1 ^= uint32(tail[1]) << 8
+		fallthrough
+	case 1:
+		k1 ^= uint32(tail[0])
+		k1 *= c1
+		k1 = bits.RotateLeft32(k1, 15)
+		k1 *= c2
+		h1 ^= k1
+	}
+
+	h1 ^= uint32(len(data))
+	h1 ^= h1 >> 16
+	h1 *= 0x85ebca6b
+	h1 ^= h1 >> 13
+	h1 *= 0xc2b2ae35
+	h1 ^= h1 >> 16
+	return h1
 }
 
 // stringToUTF16LE converts a Go string (UTF-8) to UTF-16 Little-Endian bytes.

@@ -30,7 +30,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 dotenv.load_dotenv(os.path.join(ROOT, ".env"))
 
 GW = os.environ.get("REGRESSION_GATEWAY", "http://127.0.0.1:8888")
-CODES = ["a3z3JYk0", "021Tgota"]  # 在库存量短链(勿删)
+CODES = ["03DpMyTa", "azbqi5a"]  # 在库存量短链(勿删)
 HITS_PER_CODE = 3
 WINDOW_WAIT = 15  # > DWS 10s 窗口 + Kafka 传递余量
 
