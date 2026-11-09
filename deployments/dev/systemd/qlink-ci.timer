@@ -1,0 +1,10 @@
+[Unit]
+Description=Run qlink-server local CI daily at 03:00
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=qlink-ci.service
+
+[Install]
+WantedBy=timers.target

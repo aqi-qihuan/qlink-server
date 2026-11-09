@@ -1,13 +1,13 @@
 # ============================================================
-#  Qlink Server (Go) �?Multi-stage Dockerfile
-#  6 个微服务共享一�?builder，运行时使用最�?Alpine 镜像
+#  Qlink Server (Go) �?Multi-stage Dockerfile
+#  6 个微服务共享一�?builder，运行时使用最�?Alpine 镜像
 # ============================================================
 
 # ---------- Go 版本（与 go.mod 保持一致） ----------
-ARG GO_VERSION=1.27
+ARG GO_VERSION=1.27.3
 
 # ============================================================
-#  Stage 1: 缓存依赖（仅�?go.mod/go.sum 变动时重新下载）
+#  Stage 1: 缓存依赖（仅�?go.mod/go.sum 变动时重新下载）
 # ============================================================
 FROM golang:${GO_VERSION}-alpine AS deps
 
@@ -16,17 +16,17 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 # ============================================================
-#  Stage 2: 编译（静态链接，剥离调试信息�?# ============================================================
+#  Stage 2: 编译（静态链接，剥离调试信息�?# ============================================================
 FROM deps AS builder
 
 COPY . .
 
-# 构建参数（可通过 --build-arg 注入�?ARG BUILD_VERSION=dev
+# 构建参数（可通过 --build-arg 注入�?ARG BUILD_VERSION=dev
 ARG BUILD_TIME
 ARG GIT_COMMIT
 
-# 编译优化�?#   -s -w        去除符号表和 DWARF，减小约 30% 体积
-#   -trimpath    移除编译路径信息，提升安全�?#   -tags netgo  使用�?Go DNS 解析器，避免依赖 libc
+# 编译优化�?#   -s -w        去除符号表和 DWARF，减小约 30% 体积
+#   -trimpath    移除编译路径信息，提升安全�?#   -tags netgo  使用�?Go DNS 解析器，避免依赖 libc
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
@@ -55,7 +55,7 @@ RUN apk --no-cache add \
     && echo "Asia/Shanghai" > /etc/timezone \
     && apk del tzdata
 
-# �?root 用户运行
+# �?root 用户运行
 RUN addgroup -S app && adduser -S app -G app
 USER app
 
@@ -111,7 +111,10 @@ HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
     CMD wget -qO- http://localhost:8006/health || exit 1
 ENTRYPOINT ["ai"]
 
-# --- Streamer (no HTTP port, streaming pipeline) ---
+# --- Streamer (metrics/health on 8007) ---
 FROM runtime-base AS streamer
 COPY --from=builder --chown=app:app /out/streamer /usr/local/bin/streamer
+EXPOSE 8007
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+    CMD wget -qO- http://localhost:8007/health || exit 1
 ENTRYPOINT ["streamer"]

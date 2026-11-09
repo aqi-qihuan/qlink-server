@@ -1,8 +1,14 @@
-.PHONY: all build test lint clean fmt vet install-hooks run-% docker-build docker-up docker-down help
+.PHONY: all ci ci-nightly test-race build test lint clean fmt vet install-hooks install-ci-timer run-% docker-build docker-up docker-down help
 
 SERVICES := gateway account link shop data ai streamer
 
-all: lint test build
+all: ci
+
+ci:
+	@bash tools/ci-local.sh pre-push
+
+ci-nightly:
+	@bash tools/ci-local.sh nightly
 
 ## ==================== 构建 ====================
 
@@ -54,6 +60,9 @@ test:
 test-short:
 	@go test ./... -short -count=1
 
+test-race:
+	@go test -race ./... -count=1 -timeout=10m
+
 test-cover:
 	@echo "🧪 运行测试（含覆盖率）..."
 	@go test ./... -coverprofile=coverage.out -count=1
@@ -66,7 +75,10 @@ test-cover:
 install-hooks:
 	@echo "🔗 安装 Git Hooks..."
 	@git config core.hooksPath scripts/githooks
-	@echo "✅ Git Hooks 已安装（pre-commit + commit-msg）"
+	@echo "✅ Git Hooks 已安装（pre-commit + pre-push + commit-msg）"
+
+install-ci-timer:
+	@bash scripts/install-ci-timer.sh
 
 ## ==================== Docker ====================
 
@@ -120,14 +132,18 @@ help:
 	@echo "    make vet            运行 go vet"
 	@echo "    make lint           运行 golangci-lint"
 	@echo "    make lint-install   安装 golangci-lint"
+	@echo "    make ci             本地完整门禁（pre-push）"
+	@echo "    make ci-nightly     定时门禁（含 compose/lint/vuln）"
 	@echo ""
 	@echo "  测试:"
 	@echo "    make test           运行所有测试"
 	@echo "    make test-short     运行短测试"
+	@echo "    make test-race      运行 race 测试"
 	@echo "    make test-cover     运行测试并生成覆盖率报告"
 	@echo ""
 	@echo "  Git:"
-	@echo "    make install-hooks  安装 Git Hooks"
+	@echo "    make install-hooks      安装 Git Hooks"
+	@echo "    make install-ci-timer   安装每日 03:00 定时门禁"
 	@echo ""
 	@echo "  Docker:"
 	@echo "    make docker-build       构建所有 Docker 镜像（注入版本信息）"

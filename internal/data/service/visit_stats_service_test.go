@@ -46,13 +46,13 @@ func newFakeRows(cols []string, rows ...[]any) *fakeRows {
 	return &fakeRows{cols: cols, rows: rows}
 }
 
-func (r *fakeRows) Columns() []string             { return r.cols }
+func (r *fakeRows) Columns() []string                { return r.cols }
 func (r *fakeRows) ColumnTypes() []driver.ColumnType { return nil }
-func (r *fakeRows) Close() error                  { return nil }
-func (r *fakeRows) Err() error                    { return nil }
-func (r *fakeRows) Totals(_ ...any) error         { return nil }
-func (r *fakeRows) HasData() bool                 { return true }
-func (r *fakeRows) Next() bool                    { r.idx++; return r.idx <= len(r.rows) }
+func (r *fakeRows) Close() error                     { return nil }
+func (r *fakeRows) Err() error                       { return nil }
+func (r *fakeRows) Totals(_ ...any) error            { return nil }
+func (r *fakeRows) HasData() bool                    { return true }
+func (r *fakeRows) Next() bool                       { r.idx++; return r.idx <= len(r.rows) }
 func (r *fakeRows) Scan(dest ...any) error {
 	if r.idx < 1 || r.idx > len(r.rows) {
 		return fmt.Errorf("fakeRows: scan beyond data")

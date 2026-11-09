@@ -13,11 +13,11 @@ import (
 func TestGetRandomDBPrefix_ValidAndNoPanic(t *testing.T) {
 	// 覆盖各种输入，包括已知负哈希值，验证不 panic 且结果合法
 	codes := []string{
-		"",                  // 空串
-		"026m8O3a",         // 正常短链码
-		"123456789",         // JavaStringHashCode = -1867378635（负值）
+		"",          // 空串
+		"026m8O3a",  // 正常短链码
+		"123456789", // JavaStringHashCode = -1867378635（负值）
 		"https://example.com/very/long/path?a=1&b=2&c=3#frag",
-		"😀🔥💡",            // emoji（非 BMP）
+		"😀🔥💡", // emoji（非 BMP）
 		"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", // 长串
 	}
 	for _, code := range codes {

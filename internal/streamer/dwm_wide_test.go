@@ -16,13 +16,13 @@ func TestParseUserAgent(t *testing.T) {
 		browser, os, device, mfr string
 	}{
 		{
-			name: "windows chrome",
-			ua:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+			name:    "windows chrome",
+			ua:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
 			browser: "Chrome", os: "Windows", device: "COMPUTER", mfr: "MICROSOFT",
 		},
 		{
-			name: "iphone safari",
-			ua:   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+			name:    "iphone safari",
+			ua:      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
 			browser: "Safari", os: "iOS", device: "MOBILE", mfr: "APPLE",
 		},
 		{
@@ -30,38 +30,38 @@ func TestParseUserAgent(t *testing.T) {
 			// "Mac OS X" ("like Mac OS X" in UA wins); Java's bitwalker would
 			// group it as iOS. Accepted gap — locked here so a future UA lib
 			// upgrade consciously flips this expectation.
-			name: "ipad safari (mssola limitation: grouped as Mac OS X)",
-			ua:   "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/604.1",
+			name:    "ipad safari (mssola limitation: grouped as Mac OS X)",
+			ua:      "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/604.1",
 			browser: "Safari", os: "Mac OS X", device: "MOBILE", mfr: "APPLE",
 		},
 		{
-			name: "android chrome",
-			ua:   "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+			name:    "android chrome",
+			ua:      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
 			browser: "Chrome", os: "Android", device: "MOBILE", mfr: "GOOGLE",
 		},
 		{
-			name: "mac safari",
-			ua:   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+			name:    "mac safari",
+			ua:      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
 			browser: "Safari", os: "Mac OS X", device: "COMPUTER", mfr: "APPLE",
 		},
 		{
-			name: "desktop linux firefox",
-			ua:   "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
+			name:    "desktop linux firefox",
+			ua:      "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
 			browser: "Firefox", os: "Linux", device: "COMPUTER", mfr: "UNKNOWN",
 		},
 		{
-			name: "curl",
-			ua:   "curl/8.5.0",
+			name:    "curl",
+			ua:      "curl/8.5.0",
 			browser: "curl", os: "Unknown", device: "COMPUTER", mfr: "UNKNOWN",
 		},
 		{
-			name: "python urllib (production regression anchor)",
-			ua:   "Python-urllib/3.12",
+			name:    "python urllib (production regression anchor)",
+			ua:      "Python-urllib/3.12",
 			browser: "Python-urllib", os: "Unknown", device: "COMPUTER", mfr: "UNKNOWN",
 		},
 		{
-			name: "empty",
-			ua:   "",
+			name:    "empty",
+			ua:      "",
 			browser: "Unknown", os: "Unknown", device: "COMPUTER", mfr: "Unknown",
 		},
 	}
@@ -93,8 +93,8 @@ func TestExtractOSVersion(t *testing.T) {
 	}{
 		{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130", "Win64"},
 		{"Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/130", "Android 14"},
-		{"curl/8.5.0", ""},          // no parens
-		{"(only-one-part)", ""},     // split length 1 → ""
+		{"curl/8.5.0", ""},      // no parens
+		{"(only-one-part)", ""}, // split length 1 → ""
 	}
 	for _, c := range cases {
 		if got := extractOSVersion(c.ua); got != c.want {

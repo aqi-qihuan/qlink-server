@@ -142,7 +142,7 @@ func TestReduce_MultiPackSpillover(t *testing.T) {
 	const accountNo = int64(100)
 	db := svc.dbs[0]
 
-	first := seedPack(t, db, "traffic_0", packOf(accountNo, 5, 5, tomorrow()))  // full
+	first := seedPack(t, db, "traffic_0", packOf(accountNo, 5, 5, tomorrow()))   // full
 	second := seedPack(t, db, "traffic_0", packOf(accountNo, 20, 0, tomorrow())) // fresh
 
 	err := svc.Reduce(&request.UseTrafficRequest{AccountNo: accountNo})
@@ -337,9 +337,9 @@ func TestClaimFree_ShopDownRollsBackLock(t *testing.T) {
 func TestDeleteExpireTraffic(t *testing.T) {
 	svc, _ := newTrafficSvc(t)
 
-	seedPack(t, svc.dbs[0], "traffic_0", packOf(1, 10, 0, yesterday()))  // expired
-	seedPack(t, svc.dbs[0], "traffic_0", packOf(2, 10, 0, tomorrow()))   // active
-	seedPack(t, svc.dbs[1], "traffic_1", packOf(3, 10, 0, yesterday()))  // expired (odd shard)
+	seedPack(t, svc.dbs[0], "traffic_0", packOf(1, 10, 0, yesterday())) // expired
+	seedPack(t, svc.dbs[0], "traffic_0", packOf(2, 10, 0, tomorrow()))  // active
+	seedPack(t, svc.dbs[1], "traffic_1", packOf(3, 10, 0, yesterday())) // expired (odd shard)
 
 	svc.DeleteExpireTraffic()
 

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# pre-push hook: 推送前跑完整本地门禁（race 测试 + build）。
+set -Eeuo pipefail
+exec bash "$(git rev-parse --show-toplevel)/tools/ci-local.sh" pre-push

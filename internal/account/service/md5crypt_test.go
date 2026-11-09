@@ -20,7 +20,7 @@ func TestMd5CryptHash_ValidInput(t *testing.T) {
 func TestMd5CryptHash_InvalidSaltReturnsError(t *testing.T) {
 	// 非法 salt 应返回 error（而非空串），上层据此拒绝登录
 	cases := []string{
-		"",          // 空
+		"",           // 空
 		"not-a-salt", // 不含 $1$ 前缀
 		"$$$",        // 格式错误
 	}

@@ -1,0 +1,8 @@
+[Unit]
+Description=qlink-server local CI nightly gate
+Documentation=file:///home/ctyun/Projects/qlink-server/tools/ci-local.sh
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ctyun/Projects/qlink-server
+ExecStart=/usr/bin/env bash tools/ci-local.sh nightly
