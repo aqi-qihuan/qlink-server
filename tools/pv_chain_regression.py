@@ -39,21 +39,21 @@ os.environ["NO_PROXY"] = "134.175.206.158,localhost,127.0.0.1"
 os.environ["no_proxy"] = os.environ["NO_PROXY"]
 
 
-# ---------------- ClickHouse helpers (HTTP 8123, same as _chcount.py) ----------------
+# ---------------- ClickHouse helpers (HTTP, addr from CLICKHOUSE_ADDR, same as _chcount.py) ----------------
 
 def _ch_conf():
-    host = os.environ.get("CLICKHOUSE_ADDR", "localhost:8123").split(":")[0]
+    addr = os.environ.get("CLICKHOUSE_ADDR", "localhost:28123")
     import base64
     auth = base64.b64encode(
         f"{os.environ.get('CLICKHOUSE_USER', 'default')}:{os.environ.get('CLICKHOUSE_PWD', '')}".encode()
     ).decode()
-    return host, {"Authorization": f"Basic {auth}"}
+    return addr, {"Authorization": f"Basic {auth}"}
 
 
 def ch_query(sql):
-    host, headers = _ch_conf()
-    db = os.environ.get("CLICKHOUSE_DB", "qlink_analytics")
-    url = f"http://{host}:8123/?database={db}&query=" + urllib.parse.quote(sql)
+    addr, headers = _ch_conf()
+    db = os.environ.get("CLICKHOUSE_DB", "visit_stats")
+    url = f"http://{addr}/?database={db}&query=" + urllib.parse.quote(sql)
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=10) as r:
         return r.read().decode().strip()

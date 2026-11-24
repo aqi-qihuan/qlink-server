@@ -10,6 +10,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 GATEWAY = os.environ.get("GATEWAY", "http://localhost:8888")
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "26379"))
 REDIS_PWD = os.environ.get("REDIS_PWD", "")
 UA = "qlink-test-client"
 PHONE = "139" + f"{int(time.time()) % 100000000:08d}"
@@ -48,7 +49,7 @@ def skip(name, reason=""):
     global skip_c; skip_c += 1
     print(f"  [SKIP] {name}: {reason}")
 
-rdb = redis.Redis(host=REDIS_HOST, port=6379, password=REDIS_PWD, decode_responses=True)
+rdb = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PWD, decode_responses=True)
 
 def ai_reachable():
     try:
