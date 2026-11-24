@@ -46,7 +46,7 @@ func main() {
 	mysqlUser := getEnv("MYSQL_USER", "root")
 	mysqlPwd := getEnv("MYSQL_PWD", "")
 	redisHost := getEnv("REDIS_HOST", "localhost")
-	redisPort := getEnv("REDIS_PORT", "6379")
+	redisPort := getEnv("REDIS_PORT", "26379")
 	redisPwd := getEnv("REDIS_PWD", "")
 	rabbitURL := getEnv("RABBITMQ_URL", "")
 	shopServiceURL := getEnv("SHOP_SERVICE", "http://localhost:8005")

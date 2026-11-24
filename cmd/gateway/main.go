@@ -44,7 +44,7 @@ func main() {
 
 	// Redis for distributed rate limiting
 	redisHost := getEnv("REDIS_HOST", "localhost")
-	redisPort := getEnv("REDIS_PORT", "6379")
+	redisPort := getEnv("REDIS_PORT", "26379")
 	redisPwd := getEnv("REDIS_PWD", "")
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),

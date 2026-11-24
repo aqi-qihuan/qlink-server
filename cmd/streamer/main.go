@@ -26,11 +26,11 @@ func main() {
 	shutdown := telemetry.Setup(serviceName)
 	defer telemetry.ShutdownWithTimeout(shutdown)
 
-	kafkaBrokers := getEnv("KAFKA_BROKERS", "localhost:9092")
-	redisAddr := getEnv("REDIS_ADDR", "localhost:6379")
+	kafkaBrokers := getEnv("KAFKA_BROKERS", "localhost:29092")
+	redisAddr := getEnv("REDIS_ADDR", "localhost:26379")
 	redisPwd := getEnv("REDIS_PWD", "")
 	redisDB := 0
-	clickhouseAddr := getEnv("CLICKHOUSE_ADDR", "localhost:8123")
+	clickhouseAddr := getEnv("CLICKHOUSE_ADDR", "localhost:28123")
 	clickhouseUser := getEnv("CLICKHOUSE_USER", "qlink")
 	clickhousePwd := getEnv("CLICKHOUSE_PWD", "")
 	clickhouseDB := getEnv("CLICKHOUSE_DB", "qlink_analytics")

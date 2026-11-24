@@ -49,10 +49,10 @@ func main() {
 	mysqlUser := getEnv("MYSQL_USER", "root")
 	mysqlPwd := getEnv("MYSQL_PWD", "")
 	redisHost := getEnv("REDIS_HOST", "localhost")
-	redisPort := getEnv("REDIS_PORT", "6379")
+	redisPort := getEnv("REDIS_PORT", "26379")
 	redisPwd := getEnv("REDIS_PWD", "")
 	rabbitURL := getEnv("RABBITMQ_URL", "")
-	kafkaBrokers := getEnv("KAFKA_BROKERS", "localhost:9092")
+	kafkaBrokers := getEnv("KAFKA_BROKERS", "localhost:29092")
 	accountAddr := getEnv("ACCOUNT_SERVICE", "http://localhost:8001")
 	rpcToken := getEnv("RPC_TOKEN", "rpc-token-default")
 

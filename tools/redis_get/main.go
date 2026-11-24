@@ -10,8 +10,8 @@ import (
 
 func main() {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
+		Addr:     redisAddr(),
+		Password: os.Getenv("REDIS_PWD"),
 	})
 	ctx := context.Background()
 
@@ -27,4 +27,11 @@ func main() {
 			fmt.Printf("%s => %s\n", key, val)
 		}
 	}
+}
+
+func redisAddr() string {
+	if a := os.Getenv("REDIS_ADDR"); a != "" {
+		return a
+	}
+	return "127.0.0.1:26379"
 }

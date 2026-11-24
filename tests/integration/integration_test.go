@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -118,6 +119,18 @@ func servicesReachable() bool {
 	return resp.StatusCode == 200
 }
 
+func redisAddrFromEnv() string {
+	host := os.Getenv("REDIS_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port := os.Getenv("REDIS_PORT")
+	if port == "" {
+		port = "26379"
+	}
+	return net.JoinHostPort(host, port)
+}
+
 func TestMain(m *testing.M) {
 	// 自动加载仓库根 .env（REDIS_PWD 等本地凭据），保证 go test ./... 可直接跑
 	// 注意：go test 的工作目录是包目录，必须用相对路径回到仓库根
@@ -125,12 +138,12 @@ func TestMain(m *testing.M) {
 
 	// .env 加载完成后再初始化 Redis 客户端（包级变量初始化时拿不到密码）
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     redisAddrFromEnv(),
 		Password: os.Getenv("REDIS_PWD"),
 	})
 
 	if !servicesReachable() {
-		fmt.Println("SKIP: integration tests require running services (docker-compose up -d) + Redis on localhost:8081-8006/6379.")
+		fmt.Println("SKIP: integration tests require running services (docker-compose up -d) + HTTP services on 8001-8008 and Redis on 26379.")
 		fmt.Println("      Bring the stack up, then re-run: go test ./tests/integration/... -v -count=1")
 		os.Exit(0)
 	}

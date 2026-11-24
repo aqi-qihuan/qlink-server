@@ -6,7 +6,7 @@ import urllib.request
 import dotenv
 
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
-host = os.environ.get("CLICKHOUSE_ADDR", "localhost:8123").split(":")[0]
+addr = os.environ.get("CLICKHOUSE_ADDR", "localhost:28123")
 user = os.environ.get("CLICKHOUSE_USER", "default")
 pwd = os.environ.get("CLICKHOUSE_PWD", "")
 db = os.environ.get("CLICKHOUSE_DB", "visit_stats")
@@ -15,7 +15,7 @@ H = {"Authorization": f"Basic {auth}"}
 
 
 def q(sql):
-    url = f"http://{host}:8123/?query=" + urllib.parse.quote(sql)
+    url = f"http://{addr}/?query=" + urllib.parse.quote(sql)
     req = urllib.request.Request(url, headers=H)
     with urllib.request.urlopen(req, timeout=8) as r:
         return r.read().decode().strip()

@@ -35,7 +35,7 @@ func main() {
 	}
 
 	port := getEnv("PORT", "8002")
-	chAddr := getEnv("CLICKHOUSE_ADDR", "localhost:8123")
+	chAddr := getEnv("CLICKHOUSE_ADDR", "localhost:28123")
 	chUser := getEnv("CLICKHOUSE_USER", "qlink")
 	chPwd := getEnv("CLICKHOUSE_PWD", "")
 	chDB := getEnv("CLICKHOUSE_DB", "qlink_analytics")
@@ -67,7 +67,7 @@ func main() {
 
 	// Redis
 	redisHost := getEnv("REDIS_HOST", "localhost")
-	redisPort := getEnv("REDIS_PORT", "6379")
+	redisPort := getEnv("REDIS_PORT", "26379")
 	redisPwd := getEnv("REDIS_PWD", "")
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),

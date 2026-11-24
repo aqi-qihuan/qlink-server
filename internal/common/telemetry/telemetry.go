@@ -64,7 +64,7 @@ func ensureMetrics() {
 // Init 初始化 OTel TracerProvider。
 // 环境变量：
 //   - OTEL_SDK_DISABLED=true 时只启用 /metrics，不上报 trace
-//   - OTEL_EXPORTER_OTLP_ENDPOINT 或 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT，默认 http://127.0.0.1:12800/v1/traces
+//   - OTEL_EXPORTER_OTLP_ENDPOINT 或 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT，默认 http://127.0.0.1:22800/v1/traces
 //   - OTEL_TRACE_SAMPLE_RATIO，默认 1.0
 //   - APP_ENV / BUILD_VERSION 写入 resource 属性
 //
@@ -244,7 +244,7 @@ func parseOTLPEndpoint() (host, path string, insecure bool, err error) {
 		raw = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	}
 	if raw == "" {
-		raw = "http://127.0.0.1:12800/v1/traces"
+		raw = "http://127.0.0.1:22800/v1/traces"
 	}
 
 	u, err := url.Parse(raw)
