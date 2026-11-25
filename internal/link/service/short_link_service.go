@@ -125,7 +125,26 @@ func (s *ShortLinkService) handleAddCLink(eventMessage *model.EventMessage, addR
 		log.Printf("[MQ] insert short_link error: %v", err)
 		return false
 	}
+	// The create API returned the code before this async write completed. If a
+	// visitor hit the code in between, Dispatch cached a "not found" marker.
+	// Drop it now so the very next request resolves the link that now exists.
+	s.invalidateRedirectCache(code)
 	return true
+}
+
+// invalidateRedirectCache removes the redirect cache entry for code. It is
+// intentionally a DEL (not a write-through): Dispatch is the single writer of
+// the positive cache and owns the DB read, so the next request simply reloads
+// the authoritative row. Errors are logged but never fail the MQ handler —
+// the short negative TTL is the fallback.
+func (s *ShortLinkService) invalidateRedirectCache(code string) {
+	if s.rdb == nil {
+		return
+	}
+	ctx := context.Background()
+	if err := s.rdb.Del(ctx, constant.FormatShortLinkCacheKey(code)).Err(); err != nil {
+		log.Printf("[MQ] invalidate redirect cache for %s: %v", code, err)
+	}
 }
 
 // handleAddMapping inserts into group_code_mapping table (B-side / admin).

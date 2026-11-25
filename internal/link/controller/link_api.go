@@ -20,7 +20,17 @@ import (
 	"gorm.io/gorm"
 )
 
-const shortLinkCacheTTL = 10 * time.Minute
+const (
+	shortLinkCacheTTL = 10 * time.Minute
+	// negativeCacheTTL bounds the window in which a newly created link may
+	// still be invisible while its MQ write is in flight. Keep it short so a
+	// "create then share immediately" flow recovers in seconds, not minutes.
+	negativeCacheTTL = 5 * time.Second
+	// negativeCacheField marks a cache entry as "DB lookup missed" instead of
+	// reusing del=1, which is the state of a genuinely deleted/locked link.
+	// Mixing the two made a freshly created link answer 403 for a full minute.
+	negativeCacheField = "nf"
+)
 
 type LinkApiController struct {
 	dbs           []*gorm.DB // 3 sharded DBs: ds0, ds1, dsa
@@ -53,6 +63,13 @@ func (ctrl *LinkApiController) Dispatch(c *gin.Context) {
 		c.String(http.StatusBadRequest, "invalid short link code")
 		return
 	}
+	// Reject codes that would route to a non-existent physical shard (e.g. a
+	// crawler guessing "NotExistCode123"). Without this check GORM reports a
+	// missing table and we leak a 500 instead of a clean 404.
+	if !sharding.IsValidShortLinkCode(code) {
+		c.String(http.StatusNotFound, "short link not found")
+		return
+	}
 
 	// Step 1: 尝试从 Redis 缓存获取
 	cacheKey := constant.FormatShortLinkCacheKey(code)
@@ -60,6 +77,11 @@ func (ctrl *LinkApiController) Dispatch(c *gin.Context) {
 		cached, err := ctrl.rdb.HGetAll(c, cacheKey).Result()
 		if err == nil && len(cached) > 0 {
 			// 缓存命中
+			// 负缓存：仅表示"上次回源未找到"，随时可能被异步落库推翻，返回 404。
+			if cached[negativeCacheField] == "1" {
+				c.String(http.StatusNotFound, "short link not found")
+				return
+			}
 			if cached["del"] == "1" || cached["state"] == "LOCK" {
 				c.String(http.StatusForbidden, "short link is locked or deleted")
 				return
@@ -100,11 +122,23 @@ func (ctrl *LinkApiController) Dispatch(c *gin.Context) {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Cache negative result (cache penetration protection) ONLY for
 			// genuine "not found" — NOT for DB connection failures, which
-			// would otherwise cause all requests to return 404 for 1 minute
-			// even after the DB recovers.
+			// would otherwise cause all requests to return 404 even after
+			// the DB recovers.
+			//
+			// Use a dedicated nf field + a short TTL: this link may be in the
+			// middle of an async MQ insert (the create API returns before the
+			// DB write completes). Reusing del=1 here made such links answer
+			// 403 until the cache expired, and the MQ consumer had no way to
+			// tell a negative placeholder from a real deletion.
+			//
+			// Race note: if this lookup read the DB just before the MQ commit
+			// and writes nf after the consumer's DEL, the marker can survive
+			// for up to negativeCacheTTL. That window now yields a clean 404
+			// (not 403) and self-heals in seconds, which is the intended
+			// trade-off for keeping cache penetration protection.
 			if ctrl.rdb != nil {
-				ctrl.rdb.HSet(c, cacheKey, "url", "", "del", "1", "state", "")
-				ctrl.rdb.Expire(c, cacheKey, 1*time.Minute)
+				ctrl.rdb.HSet(c, cacheKey, negativeCacheField, "1")
+				ctrl.rdb.Expire(c, cacheKey, negativeCacheTTL)
 			}
 			c.String(http.StatusNotFound, "short link not found")
 			return
