@@ -33,6 +33,10 @@ func (ctrl *LinkPublicController) VerifyPassword(c *gin.Context) {
 		response.JSON(c, response.BuildError("code and password are required"))
 		return
 	}
+	if !sharding.IsValidShortLinkCode(req.Code) {
+		response.JSON(c, response.BuildCodeAndMsg(1, "short link not found"))
+		return
+	}
 
 	dbPrefix, tableSuffix := sharding.RouteShortLink(req.Code)
 	dbIdx := sharding.GetDBIndexByPrefix(dbPrefix)
@@ -76,8 +80,8 @@ func (ctrl *LinkPublicController) VerifyPassword(c *gin.Context) {
 // Returns link metadata for preview (title, original_url, domain, state, has_password).
 func (ctrl *LinkPublicController) Preview(c *gin.Context) {
 	code := c.Param("code")
-	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 1, "message": "code is required"})
+	if code == "" || !sharding.IsValidShortLinkCode(code) {
+		c.JSON(http.StatusNotFound, gin.H{"code": 1, "message": "short link not found"})
 		return
 	}
 
@@ -86,7 +90,9 @@ func (ctrl *LinkPublicController) Preview(c *gin.Context) {
 	if ctrl.rdb != nil {
 		cached, err := ctrl.rdb.HGetAll(context.Background(), cacheKey).Result()
 		if err == nil && len(cached) > 0 {
-			if cached["del"] == "1" {
+			// nf=1 is the negative placeholder written by Dispatch while an
+			// async create is in flight; treat it as not found, same as del=1.
+			if cached[negativeCacheField] == "1" || cached["del"] == "1" {
 				c.JSON(http.StatusNotFound, gin.H{"code": 1, "message": "short link not found"})
 				return
 			}

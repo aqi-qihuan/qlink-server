@@ -15,6 +15,32 @@ func RouteShortLink(code string) (dbPrefix string, tableSuffix string) {
 	return
 }
 
+// IsValidShortLinkCode reports whether the code can be routed to an existing
+// physical shard. The system only creates short_link_<suffix> tables for the
+// suffixes in TableSuffixList, and only opens the databases in DBPrefixList.
+// A code whose first/last character falls outside those lists (e.g. a random
+// string typed by a crawler) would route to a non-existent table/database and
+// surface a 500. Callers on public endpoints must reject it as 404 before any
+// DB query. Note this validates routing feasibility, NOT existence in the DB.
+func IsValidShortLinkCode(code string) bool {
+	if len(code) < 3 { // need at least dbPrefix + one hash char + tableSuffix
+		return false
+	}
+	if !contains(DBPrefixList, string(code[0])) {
+		return false
+	}
+	return contains(TableSuffixList, string(code[len(code)-1]))
+}
+
+func contains(list []string, v string) bool {
+	for _, item := range list {
+		if item == v {
+			return true
+		}
+	}
+	return false
+}
+
 // RouteGroupCodeMapping returns the DB index and table index for group_code_mapping.
 // DB shard: account_no % 2 (0 or 1)
 // Table shard: group_id % 2 (0 or 1)
