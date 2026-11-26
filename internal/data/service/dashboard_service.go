@@ -302,7 +302,7 @@ func (s *VisitStatsService) GetGeo(accountNo int64, code, startTime, endTime str
 	query := `SELECT province, toInt64(sum(pv)) AS pv_count FROM visit_stats
 		 WHERE account_no = $1
 		 AND toYYYYMMDD(start_time) BETWEEN $2 AND $3`
-	args := []interface{}{accountNo, startTime, endTime}
+	args := []any{accountNo, startTime, endTime}
 
 	if code != "" {
 		query += ` AND code = $4 GROUP BY province ORDER BY pv_count DESC`

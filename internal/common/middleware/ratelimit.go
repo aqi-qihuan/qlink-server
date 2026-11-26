@@ -64,7 +64,7 @@ func RateLimiter(rps float64, burst int) gin.HandlerFunc {
 		defer ticker.Stop()
 		for range ticker.C {
 			now := time.Now().UnixNano()
-			limiters.Range(func(key, value interface{}) bool {
+			limiters.Range(func(key, value any) bool {
 				bucket := value.(*rateBucket)
 				bucket.mu.Lock()
 				last := bucket.lastRefill

@@ -62,7 +62,7 @@ func GenerateToken(loginUser *model.LoginUser) (string, error) {
 // ParseToken parses a JWT token (with "dcloud-link" prefix) and returns the LoginUser.
 func ParseToken(tokenStr string) (*model.LoginUser, error) {
 	tokenStr = strings.TrimPrefix(tokenStr, tokenPrefix)
-	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}

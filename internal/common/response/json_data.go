@@ -9,9 +9,9 @@ import (
 
 // JsonData is the unified API response format, compatible with Java's JsonData.
 type JsonData struct {
-	Code int         `json:"code"`
-	Data interface{} `json:"data"`
-	Msg  string      `json:"msg"`
+	Code int    `json:"code"`
+	Data any    `json:"data"`
+	Msg  string `json:"msg"`
 }
 
 // BuildSuccess returns a success response with no data.
@@ -20,7 +20,7 @@ func BuildSuccess() *JsonData {
 }
 
 // BuildSuccessData returns a success response with data.
-func BuildSuccessData(data interface{}) *JsonData {
+func BuildSuccessData(data any) *JsonData {
 	return &JsonData{Code: 0, Data: data, Msg: ""}
 }
 

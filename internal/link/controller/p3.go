@@ -74,7 +74,7 @@ func (ctrl *AbuseReportController) Create(c *gin.Context) {
 	}
 
 	ctrl.opLog.Record(loginUser.AccountNo, "abuse:report", "short_link", req.Code, c.ClientIP(), c.GetHeader("User-Agent"),
-		map[string]interface{}{"reason": req.Reason})
+		map[string]any{"reason": req.Reason})
 
 	response.JSON(c, response.BuildSuccessData(vo.AbuseReportVO{
 		ID: rpt.ID, Code: rpt.Code, Reason: rpt.Reason, Description: rpt.Description, Status: rpt.Status,
@@ -162,7 +162,7 @@ func (ctrl *BrandConfigController) Save(c *gin.Context) {
 		}
 		ctrl.db.Create(&cfg)
 	} else {
-		ctrl.db.Model(&existing).Updates(map[string]interface{}{
+		ctrl.db.Model(&existing).Updates(map[string]any{
 			"site_name": req.SiteName, "logo_url": req.LogoURL, "favicon_url": req.FaviconURL,
 			"primary_color": req.PrimaryColor, "copyright": req.Copyright,
 		})

@@ -28,7 +28,7 @@ func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
 }
 
 // PublishJSON sends a JSON message to Kafka.
-func (p *KafkaProducer) PublishJSON(ctx context.Context, key string, value interface{}) error {
+func (p *KafkaProducer) PublishJSON(ctx context.Context, key string, value any) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err

@@ -83,7 +83,7 @@ func (s *OAuthService) FetchUserInfo(tokenSource oauth2.TokenSource, userInfoURL
 		return nil, fmt.Errorf("read userinfo: %w", err)
 	}
 
-	var claims map[string]interface{}
+	var claims map[string]any
 	if err := json.Unmarshal(body, &claims); err != nil {
 		return nil, fmt.Errorf("parse userinfo: %w", err)
 	}
@@ -122,7 +122,7 @@ func (s *OAuthService) FindOrCreateAccount(info *OAuthUserInfo) (*accountmodel.A
 
 	if err == nil {
 		// Existing account: update profile if changed
-		updates := map[string]interface{}{}
+		updates := map[string]any{}
 		if info.Email != "" && account.Mail != info.Email {
 			updates["mail"] = info.Email
 		}
@@ -207,7 +207,7 @@ func (s *OAuthService) ValidateState(state string) (redirectTo string, ok bool) 
 	return val, true
 }
 
-func claimString(m map[string]interface{}, key string) string {
+func claimString(m map[string]any, key string) string {
 	if v, ok := m[key]; ok && v != nil {
 		switch val := v.(type) {
 		case string:

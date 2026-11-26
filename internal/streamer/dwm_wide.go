@@ -122,12 +122,12 @@ func (j *DWMWideJob) process(ctx context.Context, raw []byte) ([]byte, error) {
 
 // parseAndEnrichDevice extracts device info from User-Agent.
 func parseAndEnrichDevice(raw []byte) (ShortLinkWide, error) {
-	var obj map[string]interface{}
+	var obj map[string]any
 	if err := json.Unmarshal(raw, &obj); err != nil {
 		return ShortLinkWide{}, err
 	}
 
-	data, _ := obj["data"].(map[string]interface{})
+	data, _ := obj["data"].(map[string]any)
 	ua := ""
 	if data != nil {
 		ua, _ = data["user-agent"].(string)
@@ -291,7 +291,7 @@ func (j *DWMWideJob) lookupGeo(ctx context.Context, ip string) (province, city s
 		return "-", "-"
 	}
 
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.Unmarshal(body, &result); err != nil {
 		return "-", "-"
 	}
@@ -309,7 +309,7 @@ func (j *DWMWideJob) lookupGeo(ctx context.Context, ip string) (province, city s
 	return province, city
 }
 
-func strVal(obj map[string]interface{}, key string) string {
+func strVal(obj map[string]any, key string) string {
 	v, _ := obj[key].(string)
 	return v
 }

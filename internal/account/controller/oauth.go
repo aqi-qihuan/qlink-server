@@ -127,7 +127,7 @@ func (ctrl *OAuthController) Callback(c *gin.Context) {
 	// API response or browser redirect
 	accept := c.GetHeader("Accept")
 	if strings.Contains(accept, "application/json") {
-		response.JSON(c, response.BuildSuccessData(map[string]interface{}{
+		response.JSON(c, response.BuildSuccessData(map[string]any{
 			"token":      jwtToken,
 			"account_no": account.AccountNo,
 			"username":   account.Username,

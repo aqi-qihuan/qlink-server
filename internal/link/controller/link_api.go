@@ -212,7 +212,7 @@ func (ctrl *LinkApiController) sendVisitLog(c *gin.Context, code string, account
 		Ts:    util.GetCurrentTimestamp(),
 		Event: "SHORT_LINK_TYPE",
 		BizId: code,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"user-agent": userAgent,
 			"referer":    referer,
 			"accountNo":  accountNo,

@@ -94,7 +94,7 @@ func (j *DWDJob) Stop() {
 }
 
 func (j *DWDJob) process(ctx context.Context, raw []byte) (string, error) {
-	var obj map[string]interface{}
+	var obj map[string]any
 	if err := json.Unmarshal(raw, &obj); err != nil {
 		return "", fmt.Errorf("json parse: %w", err)
 	}
@@ -117,13 +117,13 @@ func (j *DWDJob) process(ctx context.Context, raw []byte) (string, error) {
 
 // generateDeviceID computes MD5 of TreeMap(ip, event, bizId, userAgent).toString()
 // Compatible with Java's DeviceUtil.geneWebUniqueDeviceId(TreeMap).
-func generateDeviceID(obj map[string]interface{}) string {
+func generateDeviceID(obj map[string]any) string {
 	ip, _ := obj["ip"].(string)
 	event, _ := obj["event"].(string)
 	bizID, _ := obj["bizId"].(string)
 
 	var userAgent string
-	if data, ok := obj["data"].(map[string]interface{}); ok {
+	if data, ok := obj["data"].(map[string]any); ok {
 		userAgent, _ = data["user-agent"].(string)
 	}
 
@@ -134,8 +134,8 @@ func generateDeviceID(obj map[string]interface{}) string {
 }
 
 // extractReferer extracts the host from the referer URL in the event data.
-func extractReferer(obj map[string]interface{}) string {
-	data, ok := obj["data"].(map[string]interface{})
+func extractReferer(obj map[string]any) string {
+	data, ok := obj["data"].(map[string]any)
 	if !ok {
 		return ""
 	}
@@ -152,7 +152,7 @@ func extractReferer(obj map[string]interface{}) string {
 
 // checkNewVisitor determines if the visitor is new (1) or returning (0).
 // Uses Redis to track the last visit date per device ID.
-func (j *DWDJob) checkNewVisitor(ctx context.Context, udid string, obj map[string]interface{}) int {
+func (j *DWDJob) checkNewVisitor(ctx context.Context, udid string, obj map[string]any) int {
 	if udid == "" {
 		return 1
 	}

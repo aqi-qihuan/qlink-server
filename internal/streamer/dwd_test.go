@@ -36,11 +36,11 @@ func TestGenerateDeviceID_GoldenVectors(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			obj := map[string]interface{}{
+			obj := map[string]any{
 				"ip":    c.ip,
 				"event": c.event,
 				"bizId": c.bizID,
-				"data":  map[string]interface{}{"user-agent": c.ua},
+				"data":  map[string]any{"user-agent": c.ua},
 			}
 			if got := generateDeviceID(obj); got != c.want {
 				t.Errorf("generateDeviceID = %q, want %q", got, c.want)
@@ -50,11 +50,11 @@ func TestGenerateDeviceID_GoldenVectors(t *testing.T) {
 }
 
 func TestGenerateDeviceID_SensitivityAndDefaults(t *testing.T) {
-	base := map[string]interface{}{
+	base := map[string]any{
 		"ip":    "1.2.3.4",
 		"event": "SHORT_LINK_TYPE",
 		"bizId": "code1",
-		"data":  map[string]interface{}{"user-agent": "UA/1.0"},
+		"data":  map[string]any{"user-agent": "UA/1.0"},
 	}
 
 	if got := generateDeviceID(base); got == "" {
@@ -62,11 +62,11 @@ func TestGenerateDeviceID_SensitivityAndDefaults(t *testing.T) {
 	}
 
 	// Changing any single field must change the udid.
-	mutations := []func(map[string]interface{}){
-		func(o map[string]interface{}) { o["ip"] = "5.6.7.8" },
-		func(o map[string]interface{}) { o["event"] = "OTHER_EVENT" },
-		func(o map[string]interface{}) { o["bizId"] = "code2" },
-		func(o map[string]interface{}) { o["data"] = map[string]interface{}{"user-agent": "OtherUA/2.0"} },
+	mutations := []func(map[string]any){
+		func(o map[string]any) { o["ip"] = "5.6.7.8" },
+		func(o map[string]any) { o["event"] = "OTHER_EVENT" },
+		func(o map[string]any) { o["bizId"] = "code2" },
+		func(o map[string]any) { o["data"] = map[string]any{"user-agent": "OtherUA/2.0"} },
 	}
 	original := generateDeviceID(base)
 	for i, mutate := range mutations {
@@ -78,7 +78,7 @@ func TestGenerateDeviceID_SensitivityAndDefaults(t *testing.T) {
 	}
 
 	// Missing fields degrade to empty strings, not errors.
-	empty := generateDeviceID(map[string]interface{}{})
+	empty := generateDeviceID(map[string]any{})
 	if empty == "" {
 		t.Error("generateDeviceID(empty obj) should still hash the empty TreeMap string")
 	}
@@ -98,7 +98,7 @@ func TestExtractReferer(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			var obj map[string]interface{}
+			var obj map[string]any
 			_ = json.Unmarshal([]byte(c.raw), &obj)
 			if got := extractReferer(obj); got != c.want {
 				t.Errorf("extractReferer(%s) = %q, want %q", c.raw, got, c.want)
@@ -108,23 +108,23 @@ func TestExtractReferer(t *testing.T) {
 }
 
 func mkEventJSON(referer string) string {
-	data := map[string]interface{}{"user-agent": "UA/1.0"}
+	data := map[string]any{"user-agent": "UA/1.0"}
 	if referer != "" {
 		data["referer"] = referer
 	}
-	b, _ := json.Marshal(map[string]interface{}{
+	b, _ := json.Marshal(map[string]any{
 		"ip": "1.2.3.4", "event": "SHORT_LINK_TYPE", "bizId": "code1", "data": data,
 	})
 	return string(b)
 }
 
-func deepCloneEvent(t *testing.T, src map[string]interface{}) map[string]interface{} {
+func deepCloneEvent(t *testing.T, src map[string]any) map[string]any {
 	t.Helper()
 	b, err := json.Marshal(src)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	var dst map[string]interface{}
+	var dst map[string]any
 	if err := json.Unmarshal(b, &dst); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

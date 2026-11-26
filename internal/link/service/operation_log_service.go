@@ -18,7 +18,7 @@ func NewOperationLogService(db *gorm.DB) *OperationLogService {
 }
 
 // Record writes an operation log entry.
-func (s *OperationLogService) Record(accountNo int64, action, resource, resourceID, ip, userAgent string, details map[string]interface{}) {
+func (s *OperationLogService) Record(accountNo int64, action, resource, resourceID, ip, userAgent string, details map[string]any) {
 	detailsJSON, _ := json.Marshal(details)
 	log := model.OperationLogDO{
 		AccountNo:  accountNo,

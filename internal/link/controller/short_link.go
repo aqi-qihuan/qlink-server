@@ -139,7 +139,7 @@ func (ctrl *ShortLinkController) Add(c *gin.Context) {
 		BizId:            fmt.Sprintf("%d", util.GenerateSnowflakeID()),
 		AccountNo:        loginUser.AccountNo,
 	}
-	content, _ := json.Marshal(map[string]interface{}{
+	content, _ := json.Marshal(map[string]any{
 		"groupId":      req.GroupID,
 		"title":        req.Title,
 		"originalUrl":  req.OriginalUrl,
@@ -171,7 +171,7 @@ func (ctrl *ShortLinkController) Add(c *gin.Context) {
 	if ctrl.opLog != nil {
 		ctrl.opLog.Record(loginUser.AccountNo, "link:create", "short_link", code,
 			c.ClientIP(), c.GetHeader("User-Agent"),
-			map[string]interface{}{"title": req.Title, "domain": req.DomainType})
+			map[string]any{"title": req.Title, "domain": req.DomainType})
 	}
 }
 
@@ -272,7 +272,7 @@ func (ctrl *ShortLinkController) Del(c *gin.Context) {
 		BizId:            fmt.Sprintf("%d", util.GenerateSnowflakeID()),
 		AccountNo:        loginUser.AccountNo,
 	}
-	content, _ := json.Marshal(map[string]interface{}{
+	content, _ := json.Marshal(map[string]any{
 		"groupId":   req.GroupID,
 		"mappingId": req.MappingID,
 		"code":      req.Code,
@@ -290,7 +290,7 @@ func (ctrl *ShortLinkController) Del(c *gin.Context) {
 	if ctrl.opLog != nil {
 		ctrl.opLog.Record(loginUser.AccountNo, "link:delete", "short_link", req.Code,
 			c.ClientIP(), c.GetHeader("User-Agent"),
-			map[string]interface{}{"mapping_id": req.MappingID, "group_id": req.GroupID})
+			map[string]any{"mapping_id": req.MappingID, "group_id": req.GroupID})
 	}
 }
 
@@ -314,7 +314,7 @@ func (ctrl *ShortLinkController) Update(c *gin.Context) {
 		BizId:            fmt.Sprintf("%d", util.GenerateSnowflakeID()),
 		AccountNo:        loginUser.AccountNo,
 	}
-	content, _ := json.Marshal(map[string]interface{}{
+	content, _ := json.Marshal(map[string]any{
 		"id":          req.ID,
 		"groupId":     req.GroupID,
 		"title":       req.Title,
@@ -336,7 +336,7 @@ func (ctrl *ShortLinkController) Update(c *gin.Context) {
 	if ctrl.opLog != nil {
 		ctrl.opLog.Record(loginUser.AccountNo, "link:update", "short_link", req.Code,
 			c.ClientIP(), c.GetHeader("User-Agent"),
-			map[string]interface{}{"id": req.ID, "title": req.Title, "domain": req.Domain})
+			map[string]any{"id": req.ID, "title": req.Title, "domain": req.Domain})
 	}
 }
 
@@ -396,7 +396,7 @@ func (ctrl *ShortLinkController) Status(c *gin.Context) {
 	if ctrl.opLog != nil {
 		ctrl.opLog.Record(loginUser.AccountNo, "link:status", "short_link", req.Code,
 			c.ClientIP(), c.GetHeader("User-Agent"),
-			map[string]interface{}{"state": req.State})
+			map[string]any{"state": req.State})
 	}
 }
 

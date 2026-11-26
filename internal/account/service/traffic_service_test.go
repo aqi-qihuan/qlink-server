@@ -234,10 +234,10 @@ func TestHandleOrderPay(t *testing.T) {
 		"INSERT INTO account (account_no, phone, pwd, secret, auth) VALUES (?, ?, ?, ?, ?)",
 		accountNo, "13800000001", "hash", "$1$salt$", "DEFAULT").Error)
 
-	content, _ := json.Marshal(map[string]interface{}{
+	content, _ := json.Marshal(map[string]any{
 		"outTradeNo": "ORDER-1",
 		"buyNum":     2,
-		"product":    map[string]interface{}{"dayTimes": 50, "validDay": 30, "level": "SECOND", "id": 7},
+		"product":    map[string]any{"dayTimes": 50, "validDay": 30, "level": "SECOND", "id": 7},
 	})
 
 	err := svc.HandleTrafficMessage(&model.EventMessage{

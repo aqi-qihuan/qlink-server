@@ -162,7 +162,7 @@ func (s *AccountService) Detail(accountNo int64) (*accountmodel.AccountDO, error
 // Update partially updates account fields (head_img, username, mail).
 // Only non-empty fields in the request are applied.
 func (s *AccountService) Update(accountNo int64, req *request.AccountUpdateRequest) error {
-	updates := map[string]interface{}{}
+	updates := map[string]any{}
 	if req.HeadImg != "" {
 		updates["head_img"] = req.HeadImg
 	}

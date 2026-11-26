@@ -38,7 +38,7 @@ func NewDingTalkAlerter(webhookURL string) *DingTalkAlerter {
 }
 
 func (a *DingTalkAlerter) Send(title, content string) error {
-	msg := map[string]interface{}{
+	msg := map[string]any{
 		"msgtype": "markdown",
 		"markdown": map[string]string{
 			"title": title,
@@ -48,7 +48,7 @@ func (a *DingTalkAlerter) Send(title, content string) error {
 	return a.sendJSON(msg)
 }
 
-func (a *DingTalkAlerter) sendJSON(payload interface{}) error {
+func (a *DingTalkAlerter) sendJSON(payload any) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func NewSlackAlerter(webhookURL string) *SlackAlerter {
 }
 
 func (a *SlackAlerter) Send(title, content string) error {
-	msg := map[string]interface{}{
+	msg := map[string]any{
 		"text": fmt.Sprintf("*%s*\n%s\n_%s_", title, content, time.Now().Format("2006-01-02 15:04:05")),
 	}
 	data, _ := json.Marshal(msg)
@@ -101,7 +101,7 @@ func NewGenericWebhookAlerter(webhookURL string) *GenericWebhookAlerter {
 }
 
 func (a *GenericWebhookAlerter) Send(title, content string) error {
-	msg := map[string]interface{}{
+	msg := map[string]any{
 		"title":     title,
 		"content":   content,
 		"timestamp": time.Now().Unix(),

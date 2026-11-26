@@ -3,11 +3,11 @@ package streamer
 // RawEvent represents the raw JSON event from ods_link_visit_topic.
 // The link service publishes visit events with this structure.
 type RawEvent struct {
-	IP    string                 `json:"ip"`
-	Event string                 `json:"event"`
-	BizID string                 `json:"bizId"`
-	TS    int64                  `json:"ts"`
-	Data  map[string]interface{} `json:"data"`
+	IP    string         `json:"ip"`
+	Event string         `json:"event"`
+	BizID string         `json:"bizId"`
+	TS    int64          `json:"ts"`
+	Data  map[string]any `json:"data"`
 }
 
 // ShortLinkWide is the enriched wide table record produced by DWM-Wide.

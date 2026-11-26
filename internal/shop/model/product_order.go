@@ -32,7 +32,7 @@ func (b BillType) Value() (driver.Value, error) {
 }
 
 // Scan 实现 sql.Scanner，从 int 还原为字符串枚举。
-func (b *BillType) Scan(src interface{}) error {
+func (b *BillType) Scan(src any) error {
 	switch v := src.(type) {
 	case int64:
 		switch v {

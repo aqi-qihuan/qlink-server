@@ -50,7 +50,7 @@ func (s *OrderService) GetOrderToken(accountNo int64) (string, error) {
 }
 
 // Confirm creates a new order and initiates payment.
-func (s *OrderService) Confirm(accountNo int64, nickname string, req *request.ConfirmOrderRequest) (map[string]interface{}, error) {
+func (s *OrderService) Confirm(accountNo int64, nickname string, req *request.ConfirmOrderRequest) (map[string]any, error) {
 	ctx := context.Background()
 
 	// Price validation
@@ -134,14 +134,14 @@ func (s *OrderService) Confirm(accountNo int64, nickname string, req *request.Co
 		return nil, fmt.Errorf("create payment failed: %w", err)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"code_url":     payResult,
 		"out_trade_no": outTradeNo,
 	}, nil
 }
 
 // Page returns paginated orders.
-func (s *OrderService) Page(accountNo int64, req *request.ProductOrderPageRequest) (map[string]interface{}, error) {
+func (s *OrderService) Page(accountNo int64, req *request.ProductOrderPageRequest) (map[string]any, error) {
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -168,7 +168,7 @@ func (s *OrderService) Page(accountNo int64, req *request.ProductOrderPageReques
 
 	totalPage := int(math.Ceil(float64(total) / float64(req.Size)))
 
-	return map[string]interface{}{
+	return map[string]any{
 		"total_record": total,
 		"total_page":   totalPage,
 		"current_data": orders,

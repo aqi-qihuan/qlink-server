@@ -156,12 +156,12 @@ func TestPageRecord_Pagination(t *testing.T) {
 		queryRow: func(_ string, _ ...any) driver.Row {
 			return &fakeRow{row: []any{25}} // total
 		},
-		query: func(q string, args ...interface{}) (driver.Rows, error) {
+		query: func(q string, args ...any) (driver.Rows, error) {
 			// args: accountNo, code, from, size
 			gotFrom, gotSize = toI64(args[2]), toI64(args[3])
 			return newFakeRows(
 				[]string{"code", "referer", "ts", "is_new", "account_no", "province", "city", "ip", "browser_name", "os", "device_type", "start_time"},
-				[]interface{}{"a3z3JYk0", "", int64(1790610519943), 1, int64(100), "GD", "SZ", "1.2.3.4", "Chrome", "Windows", "COMPUTER", time.Now()},
+				[]any{"a3z3JYk0", "", int64(1790610519943), 1, int64(100), "GD", "SZ", "1.2.3.4", "Chrome", "Windows", "COMPUTER", time.Now()},
 			), nil
 		},
 	}
@@ -183,7 +183,7 @@ func TestPageRecord_Pagination(t *testing.T) {
 
 // TestTrend_UnsupportedType: unknown granularity is rejected up front.
 func TestTrend_UnsupportedType(t *testing.T) {
-	conn := &fakeCHConn{query: func(string, ...interface{}) (driver.Rows, error) {
+	conn := &fakeCHConn{query: func(string, ...any) (driver.Rows, error) {
 		t.Fatal("no query expected")
 		return nil, nil
 	}}
@@ -196,7 +196,7 @@ func TestTrend_UnsupportedType(t *testing.T) {
 
 // TestDeviceInfo_UnsupportedField: unknown field is rejected up front.
 func TestDeviceInfo_UnsupportedField(t *testing.T) {
-	conn := &fakeCHConn{query: func(string, ...interface{}) (driver.Rows, error) {
+	conn := &fakeCHConn{query: func(string, ...any) (driver.Rows, error) {
 		t.Fatal("no query expected")
 		return nil, nil
 	}}
@@ -211,16 +211,16 @@ func TestDeviceInfo_UnsupportedField(t *testing.T) {
 // response, mapping the two group-by queries into their VO shapes.
 func TestDeviceInfo_Combined(t *testing.T) {
 	conn := &fakeCHConn{
-		query: func(q string, args ...interface{}) (driver.Rows, error) {
+		query: func(q string, args ...any) (driver.Rows, error) {
 			switch {
 			case contains(q, "device_type"):
 				return newFakeRows([]string{"d", "pv"},
-					[]interface{}{"COMPUTER", int64(7)},
-					[]interface{}{"MOBILE", int64(3)}), nil
+					[]any{"COMPUTER", int64(7)},
+					[]any{"MOBILE", int64(3)}), nil
 			case contains(q, "GROUP BY os"):
 				return newFakeRows([]string{"o", "pv"},
-					[]interface{}{"Windows", int64(9)},
-					[]interface{}{"iOS", int64(1)}), nil
+					[]any{"Windows", int64(9)},
+					[]any{"iOS", int64(1)}), nil
 			default:
 				return nil, fmt.Errorf("unexpected query: %s", q)
 			}
@@ -284,15 +284,15 @@ func TestGetDashboard_DefaultRangeAndAssembly(t *testing.T) {
 				return emptyRow()
 			}
 		},
-		query: func(q string, args ...interface{}) (driver.Rows, error) {
+		query: func(q string, args ...any) (driver.Rows, error) {
 			switch {
 			case contains(q, "GROUP BY code"):
 				return newFakeRows([]string{"code", "pv"},
-					[]interface{}{"top1", int64(80)},
-					[]interface{}{"top2", int64(20)}), nil
+					[]any{"top1", int64(80)},
+					[]any{"top2", int64(20)}), nil
 			case contains(q, "GROUP BY dt"):
 				return newFakeRows([]string{"dt", "pv", "uv"},
-					[]interface{}{"20260929", int64(10), int64(4)}), nil
+					[]any{"20260929", int64(10), int64(4)}), nil
 			default:
 				return nil, fmt.Errorf("unexpected query: %s", q)
 			}

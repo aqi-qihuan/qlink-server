@@ -94,7 +94,7 @@ func (s *VisitStatsService) RegionDay(accountNo int64, code, startTime, endTime 
 // Trend returns visit trend data with DAY/HOUR/MINUTE granularity.
 func (s *VisitStatsService) Trend(accountNo int64, code, trendType, startTime, endTime string) ([]vo.VisitTrendVO, error) {
 	var query string
-	var args []interface{}
+	var args []any
 	ctx := context.Background()
 
 	trendType = strings.ToUpper(trendType)
@@ -106,7 +106,7 @@ func (s *VisitStatsService) Trend(accountNo int64, code, trendType, startTime, e
 				 FROM visit_stats WHERE account_no = $1 AND code = $2
 				 AND toYYYYMMDD(start_time) BETWEEN toYYYYMMDD(parseDateTimeBestEffort($3)) AND toYYYYMMDD(parseDateTimeBestEffort($4))
 				 GROUP BY dt ORDER BY dt ASC`
-		args = []interface{}{accountNo, code, startTime, endTime}
+		args = []any{accountNo, code, startTime, endTime}
 	case "HOUR":
 		query = `SELECT toString(toHour(start_time)) AS dt,
 				 sum(if(is_new = 1, uv, 0)) AS new_uv, sum(uv) AS uv_count,
@@ -114,7 +114,7 @@ func (s *VisitStatsService) Trend(accountNo int64, code, trendType, startTime, e
 				 FROM visit_stats WHERE account_no = $1 AND code = $2
 				 AND toYYYYMMDD(start_time) = toYYYYMMDD(parseDateTimeBestEffort($3))
 				 GROUP BY dt ORDER BY dt ASC`
-		args = []interface{}{accountNo, code, startTime}
+		args = []any{accountNo, code, startTime}
 	case "MINUTE":
 		query = `SELECT toString(toMinute(start_time)) AS dt,
 				 sum(if(is_new = 1, uv, 0)) AS new_uv, sum(uv) AS uv_count,
@@ -122,7 +122,7 @@ func (s *VisitStatsService) Trend(accountNo int64, code, trendType, startTime, e
 				 FROM visit_stats WHERE account_no = $1 AND code = $2
 				 AND toYYYYMMDDhhmmss(start_time) BETWEEN $3 AND $4
 				 GROUP BY dt ORDER BY dt ASC`
-		args = []interface{}{accountNo, code, startTime, endTime}
+		args = []any{accountNo, code, startTime, endTime}
 	case "WEEK":
 		query = `SELECT concat(toString(toYear(start_time)), toString(toISOWeek(start_time))) AS dt,
 				 sum(if(is_new = 1, uv, 0)) AS new_uv, sum(uv) AS uv_count,
@@ -130,7 +130,7 @@ func (s *VisitStatsService) Trend(accountNo int64, code, trendType, startTime, e
 				 FROM visit_stats WHERE account_no = $1 AND code = $2
 				 AND toYYYYMMDD(start_time) BETWEEN toYYYYMMDD(parseDateTimeBestEffort($3)) AND toYYYYMMDD(parseDateTimeBestEffort($4))
 				 GROUP BY dt ORDER BY dt ASC`
-		args = []interface{}{accountNo, code, startTime, endTime}
+		args = []any{accountNo, code, startTime, endTime}
 	default:
 		return nil, fmt.Errorf("unsupported trend type: %s", trendType)
 	}
@@ -207,7 +207,7 @@ func (s *VisitStatsService) frequentQuery(accountNo int64, code, field string) (
 
 // DeviceInfo returns device distribution. When field is empty, returns combined
 // {device:[], os:[]} response; otherwise returns a flat array for the given field.
-func (s *VisitStatsService) DeviceInfo(accountNo int64, code, field string) (interface{}, error) {
+func (s *VisitStatsService) DeviceInfo(accountNo int64, code, field string) (any, error) {
 	ctx := context.Background()
 
 	if field == "" {

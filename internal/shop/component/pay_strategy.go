@@ -85,7 +85,7 @@ func (s *AliPayStrategy) UnifiedOrder(payInfo *PayInfoVO) (string, error) {
 	}
 
 	// Build biz_content
-	bizContent := map[string]interface{}{
+	bizContent := map[string]any{
 		"out_trade_no":    payInfo.OutTradeNo,
 		"total_amount":    fmt.Sprintf("%.2f", payInfo.PayFee),
 		"subject":         payInfo.Title,
@@ -204,7 +204,7 @@ func (s *AliPayStrategy) Refund(payInfo *PayInfoVO) (string, error) {
 		return "SUCCESS", nil
 	}
 
-	bizContent, _ := json.Marshal(map[string]interface{}{
+	bizContent, _ := json.Marshal(map[string]any{
 		"out_trade_no":  payInfo.OutTradeNo,
 		"refund_amount": fmt.Sprintf("%.2f", payInfo.PayFee),
 		"refund_reason": "用户申请退款",

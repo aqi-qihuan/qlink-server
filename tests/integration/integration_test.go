@@ -40,7 +40,7 @@ var (
 
 // ========== Helper Functions ==========
 
-func httpJSONWithUA(method, url string, body interface{}, token string) (map[string]interface{}, error) {
+func httpJSONWithUA(method, url string, body any, token string) (map[string]any, error) {
 	var reqBody io.Reader
 	if body != nil {
 		b, _ := json.Marshal(body)
@@ -62,24 +62,24 @@ func httpJSONWithUA(method, url string, body interface{}, token string) (map[str
 	}
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
-	var result map[string]interface{}
+	var result map[string]any
 	json.Unmarshal(data, &result)
 	return result, nil
 }
 
-func httpJSON(method, url string, body interface{}, token string) (map[string]interface{}, error) {
+func httpJSON(method, url string, body any, token string) (map[string]any, error) {
 	return httpJSONWithUA(method, url, body, token)
 }
 
-func httpGet(url string, token string) (map[string]interface{}, error) {
+func httpGet(url string, token string) (map[string]any, error) {
 	return httpJSON("GET", url, nil, token)
 }
 
-func httpPost(url string, body interface{}, token string) (map[string]interface{}, error) {
+func httpPost(url string, body any, token string) (map[string]any, error) {
 	return httpJSON("POST", url, body, token)
 }
 
-func assertSuccess(t *testing.T, name string, result map[string]interface{}, err error) {
+func assertSuccess(t *testing.T, name string, result map[string]any, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("[%s] request error: %v", name, err)
@@ -177,7 +177,7 @@ func TestHealthChecks(t *testing.T) {
 			if resp.StatusCode != 200 {
 				t.Fatalf("health check returned %d", resp.StatusCode)
 			}
-			var result map[string]interface{}
+			var result map[string]any
 			json.NewDecoder(resp.Body).Decode(&result)
 			if result["status"] != "ok" {
 				t.Fatalf("health status not ok: %v", result)
@@ -279,7 +279,7 @@ func TestAccountFlow(t *testing.T) {
 	t.Run("detail", func(t *testing.T) {
 		result, err := httpGet(accountURL+"/api/account/v1/detail", authToken)
 		assertSuccess(t, "detail", result, err)
-		data := result["data"].(map[string]interface{})
+		data := result["data"].(map[string]any)
 		t.Logf("[OK] profile: username=%v, phone=%v", data["username"], data["phone"])
 	})
 
@@ -297,7 +297,7 @@ func TestAccountFlow(t *testing.T) {
 	t.Run("verify_update", func(t *testing.T) {
 		result, err := httpGet(accountURL+"/api/account/v1/detail", authToken)
 		assertSuccess(t, "verify_update", result, err)
-		data := result["data"].(map[string]interface{})
+		data := result["data"].(map[string]any)
 		if data["username"] != "UpdatedUser" {
 			t.Fatalf("expected username=UpdatedUser, got %v", data["username"])
 		}
@@ -334,7 +334,7 @@ func TestShopFlow(t *testing.T) {
 	t.Run("product_detail", func(t *testing.T) {
 		result, err := httpGet(shopURL+"/api/product/v1/detail/1", "")
 		assertSuccess(t, "product_detail", result, err)
-		data := result["data"].(map[string]interface{})
+		data := result["data"].(map[string]any)
 		t.Logf("[OK] product: name=%v, price=%v", data["name"], data["price"])
 	})
 }
@@ -350,7 +350,7 @@ func TestLinkFlow(t *testing.T) {
 
 	// Create a short link
 	t.Run("create_link", func(t *testing.T) {
-		result, err := httpPost(linkURL+"/api/link/v1/add", map[string]interface{}{
+		result, err := httpPost(linkURL+"/api/link/v1/add", map[string]any{
 			"groupId":     0,
 			"title":       "Integration Test Link",
 			"originalUrl": "https://www.google.com",
@@ -360,7 +360,7 @@ func TestLinkFlow(t *testing.T) {
 		assertSuccess(t, "create_link", result, err)
 		data := result["data"]
 		if data != nil {
-			if m, ok := data.(map[string]interface{}); ok {
+			if m, ok := data.(map[string]any); ok {
 				shortLinkCode = fmt.Sprintf("%v", m["code"])
 			} else {
 				shortLinkCode = fmt.Sprintf("%v", data)
@@ -371,7 +371,7 @@ func TestLinkFlow(t *testing.T) {
 
 	// List links
 	t.Run("list_links", func(t *testing.T) {
-		result, err := httpPost(linkURL+"/api/link/v1/page", map[string]interface{}{
+		result, err := httpPost(linkURL+"/api/link/v1/page", map[string]any{
 			"page": 1,
 			"size": 10,
 		}, authToken)
@@ -437,7 +437,7 @@ func TestDataFlow(t *testing.T) {
 	}
 
 	t.Run("page_record", func(t *testing.T) {
-		result, err := httpPost(dataURL+"/api/visit_stats/v1/page_record", map[string]interface{}{
+		result, err := httpPost(dataURL+"/api/visit_stats/v1/page_record", map[string]any{
 			"code": "test",
 			"page": 1,
 			"size": 10,
@@ -447,7 +447,7 @@ func TestDataFlow(t *testing.T) {
 	})
 
 	t.Run("trend", func(t *testing.T) {
-		result, err := httpPost(dataURL+"/api/visit_stats/v1/trend", map[string]interface{}{
+		result, err := httpPost(dataURL+"/api/visit_stats/v1/trend", map[string]any{
 			"code":      "test",
 			"type":      "DAY",
 			"startTime": "20260101",
@@ -458,7 +458,7 @@ func TestDataFlow(t *testing.T) {
 	})
 
 	t.Run("frequent_ip", func(t *testing.T) {
-		result, err := httpPost(dataURL+"/api/visit_stats/v1/frequent_ip", map[string]interface{}{
+		result, err := httpPost(dataURL+"/api/visit_stats/v1/frequent_ip", map[string]any{
 			"code": "test",
 		}, authToken)
 		assertSuccess(t, "frequent_ip", result, err)
@@ -466,7 +466,7 @@ func TestDataFlow(t *testing.T) {
 	})
 
 	t.Run("device_info", func(t *testing.T) {
-		result, err := httpPost(dataURL+"/api/visit_stats/v1/device_info", map[string]interface{}{
+		result, err := httpPost(dataURL+"/api/visit_stats/v1/device_info", map[string]any{
 			"code":  "test",
 			"field": "os",
 		}, authToken)
@@ -483,7 +483,7 @@ func TestAIFlow(t *testing.T) {
 	}
 
 	t.Run("recommend", func(t *testing.T) {
-		result, err := httpPost(aiURL+"/api/ai/v1/recommend", map[string]interface{}{
+		result, err := httpPost(aiURL+"/api/ai/v1/recommend", map[string]any{
 			"code": "test",
 		}, authToken)
 		// AI might fail if LLM is not available, just log
@@ -495,7 +495,7 @@ func TestAIFlow(t *testing.T) {
 	})
 
 	t.Run("check_safety", func(t *testing.T) {
-		result, err := httpPost(aiURL+"/api/ai/v1/check_safety", map[string]interface{}{
+		result, err := httpPost(aiURL+"/api/ai/v1/check_safety", map[string]any{
 			"url": "https://example.com",
 		}, authToken)
 		if err != nil {

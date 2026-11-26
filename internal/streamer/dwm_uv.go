@@ -95,7 +95,7 @@ func (j *DWMUVJob) Stop() {
 // checkUniqueVisitor returns true if this is the first visit for this udid today.
 // Uses Redis SETNX with 1-day TTL (matches Java's ValueState + TTL of 1 day).
 func (j *DWMUVJob) checkUniqueVisitor(ctx context.Context, raw []byte) (bool, error) {
-	var obj map[string]interface{}
+	var obj map[string]any
 	if err := json.Unmarshal(raw, &obj); err != nil {
 		return false, err
 	}

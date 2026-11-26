@@ -250,7 +250,7 @@ func (s *ShortLinkService) HandleUpdateShortLink(eventMessage *model.EventMessag
 		dbIdx := sharding.GetDBIndexByPrefix(dbPrefix)
 		tableName := sharding.GetTableName("short_link", tableSuffix)
 
-		updates := map[string]interface{}{
+		updates := map[string]any{
 			"title":  updateReq.Title,
 			"domain": updateReq.Domain,
 		}
@@ -286,7 +286,7 @@ func (s *ShortLinkService) HandleUpdateShortLink(eventMessage *model.EventMessag
 
 		result := s.dbs[dbIdx].Table(tableName).
 			Where("id = ? AND account_no = ? AND group_id = ? AND del = 0", updateReq.ID, accountNo, updateReq.GroupID).
-			Updates(map[string]interface{}{
+			Updates(map[string]any{
 				"title":  updateReq.Title,
 				"domain": updateReq.Domain,
 			})
@@ -338,7 +338,7 @@ func (s *ShortLinkService) reduceTraffic(accountNo int64, bizId string) bool {
 	if s.accountAddr == "" {
 		return true // skip if not configured
 	}
-	payload, _ := json.Marshal(map[string]interface{}{
+	payload, _ := json.Marshal(map[string]any{
 		"accountNo": accountNo,
 		"bizId":     bizId,
 	})
@@ -366,7 +366,7 @@ func (s *ShortLinkService) reduceTraffic(accountNo int64, bizId string) bool {
 	return result.Code == 0
 }
 
-func parseExpired(expired interface{}) *time.Time {
+func parseExpired(expired any) *time.Time {
 	if expired == nil {
 		return nil
 	}

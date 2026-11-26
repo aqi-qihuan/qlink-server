@@ -75,7 +75,7 @@ func (ctrl *BatchController) Delete(c *gin.Context) {
 	}
 
 	ctrl.opLog.Record(loginUser.AccountNo, "link:batch_delete", "short_link", "", c.ClientIP(), c.GetHeader("User-Agent"),
-		map[string]interface{}{"count": deleted, "ids": req.IDs})
+		map[string]any{"count": deleted, "ids": req.IDs})
 
 	response.JSON(c, response.BuildSuccessData(gin.H{"deleted": deleted}))
 }
@@ -113,7 +113,7 @@ func (ctrl *BatchController) Status(c *gin.Context) {
 	}
 
 	ctrl.opLog.Record(loginUser.AccountNo, "link:status", "short_link", req.Code, c.ClientIP(), c.GetHeader("User-Agent"),
-		map[string]interface{}{"state": req.State})
+		map[string]any{"state": req.State})
 
 	response.JSON(c, response.BuildSuccess())
 }

@@ -74,7 +74,7 @@ func (ctrl *DomainController) Create(c *gin.Context) {
 	}
 
 	ctrl.opLog.Record(loginUser.AccountNo, "domain:create", "domain", "", c.ClientIP(), c.GetHeader("User-Agent"),
-		map[string]interface{}{"value": req.Value, "type": req.DomainType})
+		map[string]any{"value": req.Value, "type": req.DomainType})
 
 	response.JSON(c, response.BuildSuccessData(vo.DomainVO{
 		ID: d.ID, AccountNo: d.AccountNo, DomainType: d.DomainType, Value: d.Value, State: d.State,
@@ -94,7 +94,7 @@ func (ctrl *DomainController) Update(c *gin.Context) {
 		return
 	}
 
-	updates := map[string]interface{}{}
+	updates := map[string]any{}
 	if req.DomainType != "" {
 		updates["domain_type"] = req.DomainType
 	}
@@ -113,7 +113,7 @@ func (ctrl *DomainController) Update(c *gin.Context) {
 	}
 
 	ctrl.opLog.Record(loginUser.AccountNo, "domain:update", "domain", "", c.ClientIP(), c.GetHeader("User-Agent"),
-		map[string]interface{}{"id": req.ID, "updates": updates})
+		map[string]any{"id": req.ID, "updates": updates})
 
 	response.JSON(c, response.BuildSuccess())
 }
@@ -138,7 +138,7 @@ func (ctrl *DomainController) Delete(c *gin.Context) {
 	}
 
 	ctrl.opLog.Record(loginUser.AccountNo, "domain:delete", "domain", "", c.ClientIP(), c.GetHeader("User-Agent"),
-		map[string]interface{}{"id": req.ID})
+		map[string]any{"id": req.ID})
 
 	response.JSON(c, response.BuildSuccess())
 }
@@ -167,7 +167,7 @@ func (ctrl *DomainController) Status(c *gin.Context) {
 	}
 
 	ctrl.opLog.Record(loginUser.AccountNo, "domain:status", "domain", "", c.ClientIP(), c.GetHeader("User-Agent"),
-		map[string]interface{}{"id": req.ID, "state": req.State})
+		map[string]any{"id": req.ID, "state": req.State})
 
 	response.JSON(c, response.BuildSuccess())
 }

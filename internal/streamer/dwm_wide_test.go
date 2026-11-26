@@ -201,7 +201,7 @@ func TestShortLinkWideJSONRoundTrip(t *testing.T) {
 
 	// Contract: exact key names (regression guard for the 2026-09-28 CH
 	// column-name class of bug — silent schema drift between producer/consumer).
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal(b, &m); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

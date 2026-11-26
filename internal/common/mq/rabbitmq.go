@@ -51,7 +51,7 @@ func (r *RabbitMQ) BindQueue(queueName, routingKey, exchangeName string) error {
 }
 
 // PublishJSON publishes a JSON-serializable message to an exchange.
-func (r *RabbitMQ) PublishJSON(exchange, routingKey string, body interface{}) error {
+func (r *RabbitMQ) PublishJSON(exchange, routingKey string, body any) error {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("json marshal failed: %w", err)
