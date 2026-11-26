@@ -145,5 +145,24 @@ bash ~/Projects/qlink-server/deployments/dev/resources/go-stack.sh start
 ## 已知延后项
 
 - OIDC workspace / 多工作区仍 deferred，不阻塞本次切换。
-- `sql/01~05` 基础 DDL 含 `DROP TABLE IF EXISTS`，重复执行 `cmd/initschema` 会清库；后续应替换为版本化 migration。
 - `ai:8006` 需要真实 LLM endpoint 才启用；默认不启动。
+
+### Schema 初始化与版本化
+
+`cmd/initschema` 已改为幂等版本化工具（不再无条件 `DROP TABLE`）：
+
+```bash
+# 默认：库非空则跳过基础 DDL（不清库），只执行未记录的 migration
+go run ./cmd/initschema
+
+# 存量库首次升级：把现有 migration 标记为已执行，不重跑 ALTER TABLE
+go run ./cmd/initschema -baseline
+
+# 只预览将要执行的操作，不写任何数据（CI 可用）
+go run ./cmd/initschema -check
+
+# 显式清库重建（危险！会 DROP 所有基础表）
+go run ./cmd/initschema -fresh
+```
+
+已执行的 migration 版本记录在 `aqicloud_link_0.schema_migrations`。新增 DDL 时按序号加 `sql/NN_*.sql` 并加入 `cmd/initschema/main.go` 的 `migrations` 列表即可。
