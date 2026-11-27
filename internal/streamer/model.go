@@ -49,17 +49,20 @@ type VisitStats struct {
 	VisitTime   int64
 }
 
-// StatsKey is the 9-dimensional composite key for DWS aggregation.
+// StatsKey is the 9-dimensional composite key for DWS aggregation, plus the
+// 10s event-time bucket. The bucket is part of the key so a redelivered batch
+// maps to the same ClickHouse ORDER BY key and ReplacingMergeTree can dedupe.
 type StatsKey struct {
-	Code        string
-	Referer     string
-	IsNew       int
-	Province    string
-	City        string
-	IP          string
-	BrowserName string
-	OS          string
-	DeviceType  string
+	Code         string
+	Referer      string
+	IsNew        int
+	Province     string
+	City         string
+	IP           string
+	BrowserName  string
+	OS           string
+	DeviceType   string
+	WindowBucket int64 // visitTime truncated to windowDuration (ms)
 }
 
 // Column names must match the ClickHouse table exactly (snake_case, ts not visitTime).
