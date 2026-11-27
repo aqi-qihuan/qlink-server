@@ -200,6 +200,21 @@ func (j *DWSJob) consumeStream(ctx context.Context, reader *kafka.Reader, label 
 	}
 }
 
+// detachBatch takes the current pending contents and installs a fresh empty
+// batch under the same pointer, so consumer goroutines keep writing to a new
+// window while flush owns the old one.
+//
+// The VALUE COPY is essential. `batch := pending` would alias the same struct,
+// and resetting *pending would then also wipe batch.stats — flush would see
+// an empty window and silently drop every aggregate. This exact bug shipped
+// in the first version of the commit-timing fix (DWS kept logging
+// "Flushed 0 records" while consumeStream was adding to stats).
+func detachBatch(pending *pendingBatch) pendingBatch {
+	batch := *pending
+	*pending = pendingBatch{stats: make(map[StatsKey]*VisitStats)}
+	return batch
+}
+
 func (j *DWSJob) flush(ctx context.Context, mu *sync.Mutex, pending *pendingBatch) {
 	mu.Lock()
 	if len(pending.stats) == 0 {
@@ -208,8 +223,7 @@ func (j *DWSJob) flush(ctx context.Context, mu *sync.Mutex, pending *pendingBatc
 	}
 
 	// Detach the current batch; consumer goroutines keep filling a fresh one.
-	batch := pending
-	*pending = pendingBatch{stats: make(map[StatsKey]*VisitStats)}
+	batch := detachBatch(pending)
 	mu.Unlock()
 
 	records := make([]*VisitStats, 0, len(batch.stats))
@@ -227,13 +241,13 @@ func (j *DWSJob) flush(ctx context.Context, mu *sync.Mutex, pending *pendingBatc
 		// retries from the same Kafka position. Rolling back only the stats
 		// (the old behavior) left the offsets committed and lost the data.
 		mu.Lock()
-		pending.mergeBatch(batch)
+		pending.mergeBatch(&batch)
 		mu.Unlock()
 		return
 	}
 
 	// Insert succeeded — now it is safe to advance Kafka offsets.
-	j.commitBatch(ctx, batch)
+	j.commitBatch(ctx, &batch)
 	log.Printf("[DWS] Flushed %d records to ClickHouse (PV msgs=%d, UV msgs=%d)",
 		len(records), len(batch.pvMsgs), len(batch.uvMsgs))
 }

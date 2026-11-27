@@ -256,3 +256,40 @@ func TestCommitMessages_ContinuesOnError(t *testing.T) {
 		t.Errorf("commit called %d times, want 2 (must continue after error)", count)
 	}
 }
+
+// TestDetachBatch_DoesNotWipeAggregates is the regression for the bug found
+// while diagnosing the PV regression: `batch := pending` (pointer alias) plus
+// `*pending = empty` wiped the just-detached batch, so flush always saw an
+// empty window and logged "Flushed 0 records" while consumeStream kept adding.
+func TestDetachBatch_DoesNotWipeAggregates(t *testing.T) {
+	w := ShortLinkWide{Code: "abc123", VisitTime: 1700000000123, IP: "1.2.3.4"}
+	key := buildStatsKey(w)
+
+	pending := newPendingBatch()
+	pending.stats[key] = &VisitStats{PV: 3, UV: 1}
+	pending.addMessage("PV", kafka.Message{Value: []byte("m1")})
+	pending.addMessage("PV", kafka.Message{Value: []byte("m2")})
+	pending.addMessage("UV", kafka.Message{Value: []byte("m3")})
+
+	batch := detachBatch(pending)
+
+	// The detached batch must still own all aggregates and messages.
+	if got := batch.stats[key]; got == nil || got.PV != 3 || got.UV != 1 {
+		t.Errorf("detached batch lost aggregates: %+v", got)
+	}
+	if len(batch.pvMsgs) != 2 || len(batch.uvMsgs) != 1 {
+		t.Errorf("detached batch lost messages: PV=%d UV=%d", len(batch.pvMsgs), len(batch.uvMsgs))
+	}
+
+	// The shared pointer must now point at a fresh empty batch, so new
+	// messages from consumer goroutines do not mutate the detached one.
+	if len(pending.stats) != 0 || len(pending.pvMsgs) != 0 || len(pending.uvMsgs) != 0 {
+		t.Errorf("pending was not reset: stats=%d pv=%d uv=%d",
+			len(pending.stats), len(pending.pvMsgs), len(pending.uvMsgs))
+	}
+	pending.stats[key] = &VisitStats{PV: 1}
+	pending.addMessage("PV", kafka.Message{Value: []byte("new")})
+	if batch.stats[key].PV != 3 || len(batch.pvMsgs) != 2 {
+		t.Error("writing to new pending mutated the detached batch (aliasing bug)")
+	}
+}
