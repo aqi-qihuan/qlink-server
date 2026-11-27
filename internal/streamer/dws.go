@@ -93,6 +93,15 @@ func (j *DWSJob) Stop() {
 	j.uvReader.Close()
 }
 
+// windowTimeBounds returns the [start, end] strings stamped on a flushed
+// batch. NOTE: this is PROCESSING time (when the ticker fired), not EVENT time.
+// Java Flink DWS uses TumblingEventTimeWindows keyed by visitTime with a 3s
+// allowed lateness, so its start/end reflect the event's window. The two are
+// NOT equivalent under clock skew or delayed delivery — see semantic-parity test.
+func windowTimeBounds(now time.Time, duration time.Duration) (string, string) {
+	return FormatDateTime(now.Add(-duration)), FormatDateTime(now)
+}
+
 type enrichFn func(ShortLinkWide, *VisitStats)
 
 func (j *DWSJob) consumeStream(ctx context.Context, reader *kafka.Reader, label string, mu *sync.Mutex, window *map[StatsKey]*VisitStats, enrich enrichFn) {
@@ -153,10 +162,7 @@ func (j *DWSJob) flush(ctx context.Context, mu *sync.Mutex, window *map[StatsKey
 	mu.Unlock()
 
 	// Set window start/end times (processing time)
-	now := time.Now()
-	windowStart := now.Add(-windowDuration)
-	startTime := FormatDateTime(windowStart)
-	endTime := FormatDateTime(now)
+	startTime, endTime := windowTimeBounds(time.Now(), windowDuration)
 
 	records := make([]*VisitStats, 0, len(batch))
 	for _, stats := range batch {
