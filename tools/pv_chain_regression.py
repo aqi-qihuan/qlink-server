@@ -59,10 +59,15 @@ def ch_query(sql):
         return r.read().decode().strip()
 
 
-def ch_baseline(code):
-    """返回该 code 当前 max(ts), 无数据返回 0"""
-    v = ch_query(f"SELECT max(ts) FROM visit_stats WHERE code = '{code}'")
-    return int(v) if v else 0
+def ch_baseline(code=None):
+    """返回墙钟时间（毫秒）作为增量基线，往前留 2s 容错。
+
+    旧实现用 max(ts) 当基线，但 ts 列存的是事件时间 visitTime：历史行可能因
+    客户端时钟偏差/乱序带有"未来"的 ts，把基线抬高到本次访问之上，导致新行
+    被误判为旧数据（查不到）或混入历史行（重复计数）。墙钟是单调的，不受
+    事件时间分布影响。code 参数保留以兼容调用方，实际不参与计算。
+    """
+    return int(time.time() * 1000) - 2000
 
 
 def ch_delta(code, since_ts):
@@ -171,7 +176,7 @@ def main():
     print("[regression] ClickHouse OK")
 
     baselines = {c: ch_baseline(c) for c in CODES}
-    print(f"[regression] baselines(max ts) = {baselines}")
+    print(f"[regression] baselines(wall clock ms) = {baselines}")
 
     procs = []
     log_dir = None
